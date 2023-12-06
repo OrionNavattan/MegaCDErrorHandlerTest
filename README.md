@@ -1,4 +1,4 @@
-Test ROMS for my Mega CD Error Handler. Conditionals at the start of "MCD Error Handler Test.asm" and "Sub CPU Program.asm" are used to set which exceptions to test.
+Test ROMS for my [Mega CD Error Handler](https://github.com/OrionNavattan/MegaCDErrorHandler). Conditionals at the start of "MCD Error Handler Test.asm" and "Sub CPU Program.asm" are used to set which exceptions to test.
 
 
 ROM is built on my [Mode 1 Template](https://github.com/OrionNavattan/Mega-CD-Mode-1-Template). Includes code from [Devon's Mode 1 Library](https://github.com/DevsArchive/mcd-mode-1-library), [VladikComper's Error Handler](https://github.com/vladikcomper/md-modules), and FlameWing's [MDComp](https://github.com/flamewing/mdcomp).
