@@ -105,7 +105,7 @@ MainLoop:
 	endc
 
 		move.w	#cGreen,(vdp_data_port).l	; signal success
-		bra.s *								; stay here forever
+		bra.s MainLoop								; stay here forever
 
 VBlank:
 		bset #mcd_int_bit,(mcd_md_interrupt).l	; trigger VBlank on sub CPU

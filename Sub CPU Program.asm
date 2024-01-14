@@ -37,6 +37,8 @@ Init:
 		addq.l	#2,a1		; skip over instruction word
 		move.l	(a0)+,(a1)+	; set table entry to point to exception entry point
 		dbf d0,.vectorloop	; repeat for all vectors
+
+		move.l	#MainCPUError,(_Trap0).w	; vector for main CPU error
 		rts
 
 	ExceptionPointers:
@@ -60,7 +62,11 @@ Main:
 	endc
 
 		move.b	#'R',(mcd_subcom_0).w	; signal success
-		bra.s	*
+
+MainLoop:
+		cmpi.b	#$FF,(mcd_main_flag).l	; is main CPU OK?
+		bne.s	MainLoop				; branch if it is
+		trap #0
 
 VBlank:
 		rts

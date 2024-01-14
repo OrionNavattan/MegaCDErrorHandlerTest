@@ -6,3 +6,13 @@ MCD Error Handler Test.sym
 errors1.txt
 errors2.txt
 MCD Error Handler Test.bin
+Main CPU Symbols.bin
+Main CPU Symbols.kos
+mdcomp/koscmp.exe
+mdcomp/libartc42.dll
+mdcomp/libgcc_s_dw2-1.dll
+mdcomp/libkosinski.dll
+mdcomp/libstdc++-6.dll
+mdcomp/libwinpthread-1.dll
+Sub CPU Symbols.bin
+Sub CPU Symbols.kos
