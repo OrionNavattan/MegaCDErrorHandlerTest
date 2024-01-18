@@ -2,7 +2,7 @@
 		opt l.					; . is the local label symbol
 		opt ws+					; allow statements to contain white-spaces
 		opt ae-
-
+		opt	oz+					; zero offset optimization to allow zero-value constants
 ; ----------------------------------------------------------------------------
 ; Mega CD Error Handler - Main CPU module
 
@@ -298,6 +298,13 @@ vdp_dma_68k_copy:	equ vdp_dma_source_hi		; DMA 68k to VRAM copy mode
 vdp_dma_vram_fill:	equ vdp_dma_source_hi+$80	; DMA VRAM fill mode
 vdp_dma_vram_copy:	equ vdp_dma_source_hi+$C0	; DMA VRAM to VRAM copy mode
 
+; KDebug registers for Gens KMod and Blastem
+vdp_kdebug_breakpoint:		equ $9D00
+vdp_kdebug_message:			equ $9E00
+vdp_kdebug_timer:			equ $9F00
+vdp_kdebug_timer_stop:		equ vdp_kdebug_timer
+vdp_kdebug_timer_start:		equ vdp_kdebug_timer+$C0
+
 ; --------------------------------------------------------------------------
 ; VDP colors
 ; --------------------------------------------------------------------------
@@ -336,6 +343,7 @@ btnABC:		equ btnA+btnB+btnC				; A, B or C	($70)
 ; RAM structure
 			rsreset
 Console_ScreenPosReq:	rs.l	1				;		screen position request for VDP
+Console_ScreenRowReq:	rs.l	1				;		start of row position request for VDP
 Console_CharsPerLine:	rs.w	1				; d2	number of characters per line
 Console_CharsRemaining:	rs.w	1				; d3	remaining number of characters
 Console_BasePattern:	rs.w	1				; d4	base pattern
@@ -568,24 +576,16 @@ KDebug_WriteLine_Formatted:
 
 KDebug_Write_Formatted:
 
-sizeof_stringbuffer = $10
-
-		move.l	usp,a0
-		cmpi.b	#_ConsoleMagic,Console_Magic(a0)	; are we running console?
-		beq.s	.quit						; if yes, disable KDebug output, because it breaks VDP address
+sizeof_stringbuffer: = $10
 
 		pushr.l	a4
 		lea	KDebug_FlushBuffer(pc),a4		; flushing function
 		lea	-sizeof_stringbuffer(sp),sp		; allocate string buffer
 		lea	(sp),a0					; a0 = string buffer
 		moveq	#sizeof_stringbuffer-2,d7			; d7 = number of characters before flush -1
-
 		jsr	FormatString(pc)
 		lea	sizeof_stringbuffer(sp),sp		; free string buffer
-
 		popr.l	a4
-
-	.quit:
 		rts
 
 ; ----------------------------------------------------------------------------
@@ -615,12 +615,12 @@ KDebug_FlushBuffer:
 		pushr.l	a5
 
 		lea	(vdp_control_port).l,a5
-		move.w	#$9E00,d7
+		move.w	#vdp_kdebug_message,d7
 		bra.s	.write_buffer_next
 ; ===========================================================================
 
 	.write_buffer:
-		move.w	d7,(a5)
+		move.w	d7,(a5)				; write to KDebug register
 
 	.write_buffer_next:
 		move.b	(a0)+,d7
@@ -642,15 +642,46 @@ KDebug_FlushBuffer:
 ; ----------------------------------------------------------------------------
 
 KDebug_FlushLine:
-		pushr.l	a0
-		move.l	usp,a0
-		cmpi.b	#_ConsoleMagic,Console_Magic(a0)	; are we running console?
-		beq.s	.quit						; if yes, disable KDebug output, because it breaks VDP address
+		move.w	#vdp_kdebug_message,(vdp_control_port).l			; send null-terminator
+		rts
 
-		move.w	#$9E00,(vdp_control_port).l			; send null-terminator
+; -----------------------------------------------------------------------------
+; Write raw string to KDebug message buffer
 
-	.quit:
-		popr.l	a0
+; input:
+;	a0	= pointer to null-terminated string
+
+; output:
+;	a0	= pointer to the end of string
+; -----------------------------------------------------------------------------
+
+KDebug_WriteLine:
+		pea	KDebug_FlushLine(pc)
+
+KDebug_Write:
+		move.w	d7,-(sp)
+		move.l	a5,-(sp)
+
+		lea	(vdp_control_port),a5
+		move.w	#vdp_kdebug_message,d7
+		bra.s	.write_buffer_next
+; ===========================================================================
+
+	.write_buffer:
+		move.w	d7,(a5)
+
+	.write_buffer_next:
+		move.b	(a0)+,d7
+		bgt.s	.write_buffer			; if not null-terminator or flag, branch
+		beq.s	.write_buffer_done		; if null-terminator, branch
+		sub.b	#endl,d7				; is flag "new line"?
+		beq.s	.write_buffer			; if yes, branch
+		bra.s	.write_buffer_next		; otherwise, skip writing
+; ===========================================================================
+
+	.write_buffer_done:
+		move.l	(sp)+,a5
+		move.w	(sp)+,d7
 		rts
 
 ; ----------------------------------------------------------------------------
@@ -972,9 +1003,8 @@ SubCPUError:
 		move.w	#'sp',d0
 		moveq	#0,d5					; number of registers - 1
 		lea	sizeof_dumpedregs(a4),a2		; a2 = top of stack frame
-		move.l	a2,d4
-		subi.l	#program_ram,d4		; convert to sub CPU address
-		move.l	d4,-(sp)
+		suba.l	#program_ram,a2		; convert to sub CPU address
+		move.l	a2,-(sp)
 		lea	(sp),a2						; a2 = pointer to where address of frame bottom is written
 		jsr	Error_DrawRegisters(pc)
 		addq.w	#4,sp
@@ -1281,7 +1311,7 @@ ErrorHandler:
 
 	.stack_done:
 		btst	#return_bit,d6							; is execute console program (at the end) bit set?
-		bne.s	Error_RunConsoleProgram
+		bne.s	Error_RunConsoleProgram				; branch
 
 Error_IdleLoop:
 		nop
@@ -2650,11 +2680,12 @@ Console_InitShared:
 		; WARNING! Make sure a5 and a6 are properly set when calling this fragment separately
 
 		; Init Console RAM
-		move.l	a3,usp					; remember Console RAM pointer in USP to restore it in later calls
-		move.l	d5,(a3)+				; Console RAM => copy screen position (long)
-		move.l	(a1)+,(a3)+			; Console RAM => copy number of characters per line (word) + characters remaining for the current line (word)
-		move.l	(a1)+,(a3)+			; Console RAM => copy base pattern (word) + screen row size (word)
-		move.w	#_ConsoleMagic<<8,(a3)+; Console RAM => set magic number, clear reserved byte
+		move.l	a3,usp					; remember console RAM pointer in USP to restore it in later calls
+		move.l	d5,(a3)+				; console RAM => copy screen position (long)
+		move.l	d5,(a3)+ 				; console RAM => set start-of-line position (long)
+		move.l	(a1)+,(a3)+			; console RAM => copy number of characters per line (word) + characters remaining for the current line (word)
+		move.l	(a1)+,(a3)+			; console RAM => copy base pattern (word) + screen row size (word)
+		move.w	#_ConsoleMagic<<8,(a3)+; console RAM => set magic number, clear reserved byte
 
 		; Clear screen
 		move.l	d5,(a5)				; VDP => Setup VRAM for screen namespace
@@ -2697,17 +2728,16 @@ Console_SetPosAsXY:
 		cmpi.b	#_ConsoleMagic,Console_Magic(a3)
 		bne.s	.quit
 
-		move.w	(a3),d2
+		move.w	Console_ScreenRowReq(a3),d2
 		andi.w	#$E000,d2				; clear out displacement, leave base offset only
 		mulu.w	Console_ScreenRowSz(a3),d1
 		add.w	d1,d2
 		add.w	d0,d2
 		add.w	d0,d2
-		move.w	d2,(a3)
-		move.l	(a3)+,(vdp_control_port).l
-
-		move.w	(a3)+,(a3)+			; reset remaining characters counter
-
+		move.w	d2,Console_ScreenPosReq(a3)						; console RAM => update current position
+		move.w	d2,Console_ScreenRowReq(a3)	; console RAM => update start-of-line position
+		addq.w	#8,a3
+		move.w	(a3)+,(a3)+					; reset remaining characters counter
 	.quit:
 		popr.l	d1-d2/a3
 		rts
@@ -2726,7 +2756,7 @@ Console_GetPosAsXY:
 		cmpi.b	#_ConsoleMagic,Console_Magic(a3)
 		bne.s	.quit
 		moveq	#0,d1
-		move.w	(a3),d1
+		move.w	Console_ScreenPosReq(a3),d1
 		andi.w	#$1FFF,d1						; clear out base offset, leave displacement only
 		divu.w	Console_ScreenRowSz(a3),d1		; d1 = row
 		move.l	d1,d0
@@ -2748,12 +2778,13 @@ Console_StartNewLine:
 		bne.s	.quit
 
 		pushr.w	d0
-		move.w	(a3),d0
+		move.w	Console_ScreenRowReq(a3),d0
 		add.w	Console_ScreenRowSz(a3),d0
 		; TODO: Check if offset is out of plane boundaries
 		andi.w	#$5FFF,d0			; make sure line stays within plane
-		move.w	d0,(a3)			; save new position
-		move.l	(a3)+,(vdp_control_port).l
+		move.w	d0,Console_ScreenPosReq(a3)						; console RAM => update current position
+		move.w	d0,Console_ScreenRowReq(a3)	; console RAM => update start-of-line position
+		addq.w	#8,a3
 		move.w	(a3)+,(a3)+		; reset characters on line counter (copy "CharsPerLine" to "CharsRemaining")
 
 		popr.w	d0
@@ -2792,7 +2823,7 @@ Console_SetWidth:
 		move.l	usp,a3
 		cmpi.b	#_ConsoleMagic,Console_Magic(a3)
 		bne.s	.quit
-		addq.w	#4,a3
+		addq.w	#Console_CharsPerLine,a3
 		move.w	d1,(a3)+
 		move.w	d1,(a3)+
 
@@ -2818,16 +2849,18 @@ Console_WriteLine:
 		pea	Console_StartNewLine(pc)	; start new line before returning to caller
 
 Console_Write:
-		pushr.l	d1-d6/a3/a6
+		pushr.l	d1-d7/a3/a6
 		move.l	usp,a3
 		cmpi.b	#_ConsoleMagic,Console_Magic(a3)
 		bne.s	.quit
 
 		; Load console variables
-		move.l	(a3)+,d5			; d5 = VDP screen position request
+		movem.l	(a3)+,d5/d7		; VDP screen position request; VDP start-of-line position
 		movem.w	(a3),d2-d4/d6		; number of characters per line, number of characters remaining until next line, base pattern, screen position increment value
 		swap	d6
 		lea	(vdp_data_port).l,a6		; a6 = VDP data port
+		move.l	d5,vdp_control_port-vdp_data_port(a6)			; VDP => set current position
+		swap	d5
 
 		; First iteration in .loop, unrolled
 		moveq	#0,d1
@@ -2837,23 +2870,27 @@ Console_Write:
 
 	.done:
 		movem.w	d2-d4,(a3)			; save d2-d4 (ignore d6 as it won't get changed anyways ...)
-		move.l	d5,-(a3)			; save screen position
+		swap	d5
+		movem.l	d5/d7,-(a3)		; save current and start-of-line positions
 
 	.quit:
-		popr.l	d1-d6/a3/a6
+		popr.l	d1-d7/a3/a6
 		rts
 ; ===========================================================================
 
 	.loop:
 		dbf	d3,.writechar
 		add.w	d2,d3				; restore number of characters per line
-		add.l	d6,d5
-		bclr	#29,d5
-		move.l	d5,vdp_control_port-vdp_data_port(a6)			; setup screen position
+		add.l	d6,d7
+		bclr	#29,d7
+		move.l	d7,vdp_control_port-vdp_data_port(a6)	; setup screen position
+		move.l	d7,d5				; current position = start-of-line position
+		swap	d5
 
 	.writechar:
 		add.w	d4,d1  			; add base pattern
 		move.w	d1,(a6)			; draw
+		addq.w	#2,d5			; next character position
 
 	.nextchar:
 		moveq	#0,d1
@@ -2869,9 +2906,9 @@ Console_Write:
 
 .command_handlers:
 		; For flags E0-EF (no arguments)
-		add.l	d6,d5						; $00	; codes E0-E1 : start a new line
+		add.l	d6,d7						; $00	; codes E0-E1 : start a new line
 		moveq	#29,d1 					; $02	; codes E2-E3 : <<UNUSED>>
-		bclr	d1,d5						; $04	; codes E4-E5 : <<UNUSED>>
+		bclr	d1,d7					; $04	; codes E4-E5 : <<UNUSED>>
 		bra.s	.reset_line					; $06	; codes E6-E7 : reset position to the beginning of line
 ; ===========================================================================
 
@@ -2901,14 +2938,16 @@ Console_Write:
 		add.w	d1,d1						; $1C	; codes FC-FD : <<UNUSED>>
 		moveq	#-$80,d3					; $1E	; codes FE-FF : <<UNUSED>>
 		swap	d3							;
-		and.l	d3,d5						;
+		and.l	d3,d7						;
 		swap	d1							;
-		or.l	d1,d5						;
+		or.l	d1,d7						;
 ;		bra.s	.reset_line					; restore d3 anyways, as it's corrupted
 
 .reset_line:
 		move.w	d2,d3
-		move.l	d5,vdp_control_port-vdp_data_port(a6)
+		move.l	d7,vdp_control_port-vdp_data_port(a6)
+		move.l	d7,d5						; current position = start-of-line position
+		swap	d5
 		bra.s	.nextchar
 ; ===========================================================================
 
