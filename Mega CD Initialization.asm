@@ -207,7 +207,7 @@ EntryPoint:
 		dbf d5,.clear_wordram	; repeat for entire wordram
 
 	;.gotomain:
-		bra.w	MainLoop
+		bra.w	WaitSubCPU
 ; ===========================================================================
 
 SubCrash:

@@ -210,7 +210,7 @@ Console: macro
 		if (__sp>0)
 			movem.l	a0-a2/d7,-(sp)
 			lea	4*4(sp),a2
-			lea	@str\@(pc),a1
+			lea	.str\@(pc),a1
 			jsr	Console_\0\_Formatted
 			movem.l	(sp)+,a0-a2/d7
 			if (__sp>8)
@@ -222,7 +222,7 @@ Console: macro
 		; ... Otherwise, use direct write as an optimization
 		else
 			move.l	a0,-(sp)
-			lea		@str\@(pc),a0
+			lea		.str\@(pc),a0
 			jsr		Console_\0
 			move.l	(sp)+,a0
 		endc
@@ -301,7 +301,7 @@ KDebug: macro
 		if (__sp>0)
 			movem.l	a0-a2/d7,-(sp)
 			lea	4*4(sp),a2
-			lea	@str\@(pc),a1
+			lea	.str\@(pc),a1
 			jsr	KDebug_\0\_Formatted(pc)
 			movem.l	(sp)+,a0-a2/d7
 			if (__sp>8)
@@ -458,7 +458,7 @@ __FSTRING_GenerateDecodedString: macro string
 			endc
 
 			if (\__param < $80)
-				inform	2,"Illegal operand format setting: ""\__param\"". Expected ""hex"", ""dec"", ""bin"", ""sym"", ""str"" or their derivatives."
+				inform	2,"Illegal operand format setting: ""\__param\"". Expected ""hex"", ""deci"", ""bin"", ""sym"", ""str"" or their derivatives."
 			endc
 
 			if "\__type"=".b"

@@ -5,7 +5,7 @@
 		opt w+					; print warnings
 		opt m+					; do not expand macros - if enabled, this can break assembling
 
-		ErrorType: equ 2	; 0 = no error, 1 = address error, 2 = illegal instruction
+		TestType: equ 2	; 0 = no error, 1 = address error, 2 = illegal instruction
 
 		include "Debugger Macros and Common Defs.asm"
 		include "Mega CD Sub CPU.asm"
@@ -55,16 +55,28 @@ Init:
 Main:
 		addq.w #4,sp	; throw away return address to BIOS code, as we will not be returning there
 
-	if ErrorType=1
+		moveq	#'R',d0
+		move.b	d0,(mcd_subcom_0).w	; signal success
+
+WaitLoop:
+		cmpi.b	#$FF,(mcd_main_flag).w	; is main CPU OK?
+		bne.s	.mainOK				; branch if it is
+		trap #0
+
+	.mainOK:
+		cmp.b	(mcd_maincom_0).w,d0		; 	has main CPU acknowledged?
+		bne.s	WaitLoop			; branch if not
+
+		clr.b	(mcd_subcom_0).w
+
+	if TestType=1
 		move.w	1(a0),d0	; crash the CPU with a word operation at an odd address
-	elseif 	ErrorType=2
+	elseif 	TestType=2
 		illegal
 	endc
 
-		move.b	#'R',(mcd_subcom_0).w	; signal success
-
 MainLoop:
-		cmpi.b	#$FF,(mcd_main_flag).l	; is main CPU OK?
+		cmpi.b	#$FF,(mcd_main_flag).w	; is main CPU OK?
 		bne.s	MainLoop				; branch if it is
 		trap #0
 

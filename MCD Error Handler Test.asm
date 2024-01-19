@@ -4,7 +4,7 @@
 		opt ws+					; allow statements to contain white-spaces
 		opt w+					; print warnings
 
-		ErrorType: equ 0	; 0 = no error, 1 = address error, 2 = illegal instruction
+		TestType: equ 3	; 0 = no error, 1 = address error, 2 = illegal instruction, 3 = string formatter test
 
 		MainCPU: equ 1 ; enable some debugging features for Main CPU only
 
@@ -89,25 +89,62 @@ EndOfHeader:
 
 		include "Mega CD Initialization.asm"	; EntryPoint
 
-MainLoop:
-		cmpi.b	#$FF,(mcd_sub_flag).l	; is sub CPU OK?
+WaitSubCPU:
+		moveq	#'R',d0
+	WaitLoop:
+		cmpi.b	#$FF,mcd_sub_flag-mcd_mem_mode(a3)	; is sub CPU OK?
 		bne.s	.subOK				; branch if it is
 		trap #0
 
 	.subOK:
-		cmpi.b	#'R',(mcd_subcom_0).l	; is sub CPU done initializing?
-		bne.s	MainLoop				; branch if not
+		cmp.b	mcd_subcom_0-mcd_mem_mode(a3),d0		; is sub CPU done initializing?
+		bne.s	WaitLoop				; branch if not
 
-	if ErrorType=1
+		move.b	d0,mcd_maincom_0-mcd_mem_mode(a3)	; acknowledge
+
+	.waitack:
+		tst.b	mcd_subcom_0-mcd_mem_mode(a3)	; is sub CPU ready?
+		bne.s	.waitack						; branch if not
+
+		clr.b	mcd_maincom_0-mcd_mem_mode(a3)
+
+
+	if TestType=1
 		move.w	1(a0),d0	; crash the CPU with a word operation at an odd address
-	elseif 	ErrorType=2
-		illegal
+	elseif 	TestType=2
+		illegal				; test illegal instruction vector
 	endc
 
+	if TestType<3
+	    ; If we're not running a console test
 		move.w	#cGreen,(vdp_data_port).l	; signal success
-		bra.s MainLoop								; stay here forever
+
+	else
+		; Prepare to run a console program
+		lea	-sizeof_Console_RAM(sp),sp
+		lea (sp),a3
+		bsr.w	ErrorHandler_SetupVDP
+		bsr.w	Error_InitConsole
+	endc
+
+	if TestType=3
+		bsr.s FormatStringTest
+	endc
+
+MainLoop:
+		cmpi.b	#$FF,mcd_sub_flag-mcd_mem_mode(a3)	; is sub CPU OK?
+		bne.s	MainLoop				; branch if it is
+		trap #0
+
+	if TestType=3
+		include "FormatString Test.asm"
+
+TestSymbols:
+		incbin "FormatString Test Symbols.kos"
+	endc
 
 VBlank:
+
 		bset #mcd_int_bit,(mcd_md_interrupt).l	; trigger VBlank on sub CPU
 		rte
 
