@@ -143,9 +143,9 @@ assert:	macro	src,cond,dest
 	else narg=2
 		tst.\0	\src
 	endc
-		b\cond\.s	@skip\@
+		b\cond\.s	.skip\@
 		RaiseError	"Assertion failed:%<endl>\src \cond \dest"
-	@skip\@:
+	.skip\@:
 	endc
 	endm
 
@@ -313,12 +313,12 @@ KDebug: macro
 		; ... Otherwise, use direct write as an optimization
 		else
 			move.l	a0,-(sp)
-			lea		@str\@(pc),a0
+			lea		.str\@(pc),a0
 			jsr		KDebug_\0(pc)
 			move.l	(sp)+,a0
 		endc
 		move.w	(sp)+,sr
-		bra.w	@instr_end\@
+		bra.w	.instr_end\@
 	.str\@:
 		__FSTRING_GenerateDecodedString \1
 		even
