@@ -5,7 +5,7 @@
 		opt w+					; print warnings
 		opt m+					; do not expand macros - if enabled, this can break assembling
 
-		TestType: equ 2	; 0 = no error, 1 = address error, 2 = illegal instruction
+		TestType: equ 0	; 0 = no error, 1 = address error, 2 = illegal instruction
 
 		include "Debugger Macros and Common Defs.asm"
 		include "Mega CD Sub CPU.asm"

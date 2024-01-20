@@ -859,6 +859,8 @@ ErrorHandler_ExtraDebuggerList:
 SubCPUError:
 		disable_ints			; disable interrupts for good
 
+		KDebug.WriteLine "Entered Sub CPU Error Handler..."
+
 	if SubCPUSymbolSupport
 		st.b	(mcd_main_flag).l	; let sub CPU know we've noticed
 
@@ -1100,6 +1102,8 @@ SubCPUError:
 
 ErrorHandler:
 		disable_ints						; disable interrupts for good
+
+		KDebug.WriteLine "Entered Main CPU Error Handler..."
 
 	if SubCPUSymbolSupport
 		st.b	(mcd_main_flag).l			; let sub CPU know we've crashed

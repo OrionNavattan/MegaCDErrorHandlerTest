@@ -81,8 +81,10 @@ TerminateSubCPUOps:
 		lea (mcd_mem_mode).w,a0
 
 	.wait2M:
+		andi.b	#~(priority_underwrite|priority_overwrite),(a0)	; disable priority mode
 		bclr	#wordram_mode_bit,(a0)	; set wordram to 2M mode
 		bne.s	.wait2M						; branch if it wasn't already in 2M mode (wait for config change to complete)
+
 
 		btst	#wordram_swapsub_bit,(a0)	; is wordram assigned to main CPU?
 		beq.s	.done						; branch if so

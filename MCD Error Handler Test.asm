@@ -4,7 +4,7 @@
 		opt ws+					; allow statements to contain white-spaces
 		opt w+					; print warnings
 
-		TestType: equ 3	; 0 = no error, 1 = address error, 2 = illegal instruction, 3 = string formatter test
+		TestType: equ 0	; 0 = no error, 1 = address error, 2 = illegal instruction, 3 = string formatter test
 
 		MainCPU: equ 1 ; enable some debugging features for Main CPU only
 
