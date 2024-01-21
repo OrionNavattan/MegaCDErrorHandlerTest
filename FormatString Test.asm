@@ -1,5 +1,4 @@
 StringsBuffer:	equ $FF0000
-;ArgumentsStack: equ $FFFF8000
 short_data_chunk:	equ	$10000
 long_data_chunk:	equ	$10080
 
@@ -55,53 +54,70 @@ FormatStringTest:
 		addq.w	#1,d1							; increment test number
 		adda.w	8(a6),a6						; a6 => Next test
 		tst.w	(a6)							; is test header valid?
-		bpl.w	.RunTest						; if yes, keep doing tests
+		bpl.s	.RunTest						; if yes, keep doing tests
 
 		Console.WriteLine 'Number of completed tests: %<.b d1 deci>'
 		Console.WriteLine '%<pal1>ALL TESTS HAVE PASSED SUCCESSFULLY'
-		rts
 
-	; -------------------------------------------------------------------------
+	.CommonFinish:
+		bsr.w	Console_StartNewLine
+		Console.WriteLine '%<pal0>Press Start to return to Main Menu'
+		enable_ints
+
+	.waitloop:
+		cmpi.b	#$FF,(mcd_sub_flag).l	; is sub CPU OK?
+		bne.s	.subOK			; branch if so
+		trap #0
+
+	.subok:
+		bsr.w	VSync	; wait for VBlank
+		lea (v_joypad_hold).w,a0	; read the joypad
+		lea (port_1_data).l,a1
+		bsr.w	ReadJoypad
+		andi.b	#btnStart,d1	; d1 still contains pressed joypad buttons
+		beq.s	.waitloop		; wait until start is pressed
+		bra.w	TestDone
+; ===========================================================================
+
 	.PrintFailureHeader:
 		Console.WriteLine '%<pal2>Test #%<.b d1 deci> FAILED'
-		rts
+; ===========================================================================
 
-	; -------------------------------------------------------------------------
 	.PrintFailureDiff:
 		Console.WriteLine '%<pal0>Got:%<endl>%<pal2>"%<.l a2 str>"'
 		Console.WriteLine '%<pal0>Expected:%<endl>%<pal2>"%<.l a3 str>"'
 
 	.HaltTests:
 		Console.WriteLine '%<pal1>TEST FAILURE, STOPPING'
-		rts
+		bra.w	.CommonFinish
+; ===========================================================================
 
-	; -------------------------------------------------------------------------
 	.BufferOverflow:
-		bsr	.PrintFailureHeader
+		bsr.w	.PrintFailureHeader
 		Console.WriteLine '%<pal1>Error: Writting past the end of buffer'
-		bra .HaltTests
+		bra.s .HaltTests
+; ===========================================================================
 
-	; -------------------------------------------------------------------------
 	.SizeMismatch:
-		bsr	.PrintFailureHeader
+		bsr.w	.PrintFailureHeader
 		Console.WriteLine '%<pal1>Error: Size mismatch (%<.b d3> != %<.b d4>)'
-		bra	.PrintFailureDiff
+		bra.w	.PrintFailureDiff
+; ===========================================================================
 
-	; -------------------------------------------------------------------------
 	.ByteMismatch:
-		bsr	.PrintFailureHeader
+		bsr.w	.PrintFailureHeader
 		Console.WriteLine '%<pal1>Error: Byte mismatch (%<.b -1(a1)> != %<.b -1(a5)>)'
-		bra	.PrintFailureDiff
+		bra.w	.PrintFailureDiff
 
 ; --------------------------------------------------------------
 ; Buffer flush function
 ; --------------------------------------------------------------
 
 .IdleFlush:
-	addq.w	#8, d7				; set Carry flag, so FormatString is terminated after this flush
-	rts
+		addq.w	#8, d7				; set Carry flag, so FormatString is terminated after this flush
+		rts
+; ===========================================================================
 
-; --------------------------------------------------------------
 dcs	macro
 		dc.b	.end\@-.start\@
 	.start\@:
@@ -435,19 +451,19 @@ TestData:
 			<$B3,$00>, &
 			<'long_data_chunk+100010'>
 
-	dc.w	-1
+		dc.w	-1
+; ===========================================================================
 
-; --------------------------------------------------------------
 .SampleString1:
-	dc.b	'<String insertion test>',0
+		dc.b	'<String insertion test>',0
 
 .SampleString2:
-	dc.b	'This string takes all the buffer',0
+		dc.b	'This string takes all the buffer',0
 
 .EmptyString:
-	dc.b	0
+		dc.b	0
 
 .OneCharacterString:
-	dc.b	'a',0
+		dc.b	'a',0
 
-	even
+		even

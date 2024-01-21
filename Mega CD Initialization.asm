@@ -227,7 +227,7 @@ SetupValues:
 		dc.w	$2700					; disable interrupts
 
 		dc.l	z80_ram				; a1
-		dc.l	workram				; a2
+		dc.l	workram_start		; a2
 		dc.l	mcd_mem_mode		; a3
 		dc.l	cd_bios_name		; a4
 		dc.l	vdp_data_port		; a5

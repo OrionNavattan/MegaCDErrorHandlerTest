@@ -313,6 +313,29 @@ cWhite:	equ $EEE
 cBlack:	equ 0
 
 ; --------------------------------------------------------------------------
+; VDP tile settings
+; --------------------------------------------------------------------------
+
+tile_xflip_bit:	equ 3
+tile_yflip_bit:	equ 4
+tile_pal12_bit:	equ 5
+tile_pal34_bit:	equ 6
+tile_hi_bit:	equ 7
+
+tile_xflip:	equ (1<<tile_xflip_bit)<<8		; $800
+tile_yflip:	equ (1<<tile_yflip_bit)<<8		; $1000
+tile_line0:	equ (0<<tile_xflip_bit)<<8		; 0
+tile_line1:	equ (1<<tile_pal12_bit)<<8		; $2000
+tile_line2:	equ (1<<tile_pal34_bit)<<8		; $4000
+tile_line3:	equ ((1<<tile_pal34_bit)|(1<<tile_pal12_bit))<<8 ; $6000
+tile_hi:	equ (1<<tile_hi_bit)<<8			; $8000
+
+tile_palette:	equ tile_pal4				; $6000
+tile_settings:	equ	tile_xflip|tile_yflip|tile_palette|tile_hi ; $F800
+tile_vram:		equ (~tile_settings)&$FFFF	; $7FF
+tile_draw:		equ	(~tile_hi)&$FFFF	; $7FFF
+
+; --------------------------------------------------------------------------
 ; Joypad input
 ; --------------------------------------------------------------------------
 
@@ -334,7 +357,6 @@ btnDn:		equ 1<<bitDn					; Down		($02)
 btnUp:		equ 1<<bitUp					; Up		($01)
 btnDir:		equ btnL+btnR+btnDn+btnUp			; Any direction	($0F)
 btnABC:		equ btnA+btnB+btnC				; A, B or C	($70)
-
 
 ; ----------------------------------------------------------------------------
 ; Console RAM
@@ -859,7 +881,7 @@ ErrorHandler_ExtraDebuggerList:
 SubCPUError:
 		disable_ints			; disable interrupts for good
 
-		KDebug.WriteLine "Entered Sub CPU Error Handler..."
+	;	KDebug.WriteLine "Entered Sub CPU Error Handler..."
 
 	if SubCPUSymbolSupport
 		st.b	(mcd_main_flag).l	; let sub CPU know we've noticed
@@ -1103,7 +1125,7 @@ SubCPUError:
 ErrorHandler:
 		disable_ints						; disable interrupts for good
 
-		KDebug.WriteLine "Entered Main CPU Error Handler..."
+	;	KDebug.WriteLine "Entered Main CPU Error Handler..."
 
 	if SubCPUSymbolSupport
 		st.b	(mcd_main_flag).l			; let sub CPU know we've crashed
@@ -2606,7 +2628,7 @@ FormatString_CodeHandlers:
 ; ----------------------------------------------------------------------------
 
 Console_Init:
-		lea	vdp_control_port,a5
+		lea	(vdp_control_port).l,a5
 		lea	vdp_data_port-vdp_control_port(a5),a6
 
 	; Load console font

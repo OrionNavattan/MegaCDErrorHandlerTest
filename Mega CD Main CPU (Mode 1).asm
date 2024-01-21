@@ -138,6 +138,8 @@ bank_reg_7:		equ $A130FF				; Bank register for address $380000-$3FFFFF
 tmss_sega:		equ $A14000				; write the string "SEGA" to unlock the VDP
 tmss_reg:		equ $A14101				; bankswitch between cartridge and TMSS ROM
 
+workram_start:	equ $FFFF0000
+
 ; Memory sizes
 sizeof_ram:			equ $10000
 sizeof_vram:		equ $10000
