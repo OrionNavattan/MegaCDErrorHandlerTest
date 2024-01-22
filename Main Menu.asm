@@ -174,5 +174,5 @@ TestSubCPUAddrErr:
 ; ===========================================================================
 
 TestSubCPUIllegal:
-		moveq	#subcmd_TestIllegal,d0		; send command to crash sub CPU with address error
+		moveq	#subcmd_TestIllegal,d0		; send command to crash sub CPU with illegal instruction
 		bra.w	SubCPUCmd
