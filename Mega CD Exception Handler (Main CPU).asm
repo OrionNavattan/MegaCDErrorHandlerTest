@@ -2647,7 +2647,6 @@ Console_Init:
 		addq.w	#2,a1					; skip end marker
 
 		; Load palette
-		lea	Console_FillTile(pc),a0
 		vdp_comm.l	move,0,cram,write,(a5)	; VDP => Setup CRAM write at offset $00
 		moveq	#cBlack,d0					; d0 = black color
 		moveq	#4-1,d3				; d3 = number of palette lines - 1
@@ -2662,7 +2661,7 @@ Console_Init:
 		bpl.s	.iscolor					; if color, branch
 
 		moveq	#0,d1
-		jsr	$10(a0,d2.w)			; fill the rest of the line by a clever jump (WARNING! Precision required!)
+		jsr	Console_FillTile+$10(pc,d2.w)			; fill the rest of the line by a clever jump (WARNING! Precision required!)
 		dbf	d3,.fill_palette_line
 	; fallthrough
 
