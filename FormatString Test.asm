@@ -16,18 +16,18 @@ FormatStringTest:
 		lea	(StringsBuffer).l,a5		; a5 = string buffer
 		moveq	#0,d1					; d1 will be tests counter
 
-	.RunTest:
+	.run_test:
 		lea	(a5),a0						; a0 = buffer
 		movea.l	(a6),a1						; a1 = source string
 		lea	$A(a6),a2						; a2 = arguments stack
 		moveq	#_bufferSize-1,d7				; d7 = string buffer size -1
-		lea	.IdleFlush(pc),a4
+		lea	IdleFlush(pc),a4
 		move.b	#_canaryValue,_bufferSize(a5)	; write down canary value after the end of the buffer
 
 		jsr	FormatString(pc)					; HERE'S OUR STAR LADIES AND GENTLEMEN !~  LET'S SEE HOW IT SURVIVES THE TEST
 
 		cmp.b	#_canaryValue,_bufferSize(a5)	; make sure canary value didn't get overwritten ...
-		bne.w	.BufferOverflow					; if it did, then writting past the end of the buffer is detected
+		bne.w	.buffer_overflow					; if it did, then writting past the end of the buffer is detected
 		sf.b	_bufferSize(a5)					; add null-terminator past the end of the buffer, so strings are displayed correctly ...
 
 		movea.l	4(a6),a1						; a1 = Compare string
@@ -40,26 +40,26 @@ FormatStringTest:
 		sub.l	a5,a0
 		move.w	a0,d3							; d3 = actual output size
 		cmp.w	d3,d4							; compare actual output size to the expected
-		bne.w	.SizeMismatch					; if they don't match, branch
+		bne.w	.size_mismatch					; if they don't match, branch
 
 		subq.w	#1, d4
-		bmi.w	.NextTest
+		bmi.w	.next_test
 
 	.compare_loop:
 		cmpm.b	(a1)+,(a5)+
-		bne.w	.ByteMismatch
+		bne.w	.byte_mismatch
 		dbf	d4,.compare_loop
 
-	.NextTest:
+	.next_test:
 		addq.w	#1,d1							; increment test number
 		adda.w	8(a6),a6						; a6 => Next test
 		tst.w	(a6)							; is test header valid?
-		bpl.s	.RunTest						; if yes, keep doing tests
+		bpl.s	.run_test						; if yes, keep doing tests
 
 		Console.WriteLine 'Number of completed tests: %<.b d1 deci>'
 		Console.WriteLine '%<pal1>ALL TESTS HAVE PASSED SUCCESSFULLY'
 
-	.CommonFinish:
+	.common_finish:
 		bsr.w	Console_StartNewLine
 		Console.WriteLine '%<pal0>Press Start to return to Main Menu'
 		enable_ints
@@ -79,41 +79,41 @@ FormatStringTest:
 		bra.w	TestDone
 ; ===========================================================================
 
-	.PrintFailureHeader:
+	.print_failure_header:
 		Console.WriteLine '%<pal2>Test #%<.b d1 deci> FAILED'
 ; ===========================================================================
 
-	.PrintFailureDiff:
+	.print_failure_diff:
 		Console.WriteLine '%<pal0>Got:%<endl>%<pal2>"%<.l a2 str>"'
 		Console.WriteLine '%<pal0>Expected:%<endl>%<pal2>"%<.l a3 str>"'
 
 	.HaltTests:
 		Console.WriteLine '%<pal1>TEST FAILURE, STOPPING'
-		bra.w	.CommonFinish
+		bra.w	.common_finish
 ; ===========================================================================
 
-	.BufferOverflow:
-		bsr.w	.PrintFailureHeader
+	.buffer_overflow:
+		bsr.w	.print_failure_header
 		Console.WriteLine '%<pal1>Error: Writting past the end of buffer'
 		bra.s .HaltTests
 ; ===========================================================================
 
-	.SizeMismatch:
-		bsr.w	.PrintFailureHeader
+	.size_mismatch:
+		bsr.w	.print_failure_header
 		Console.WriteLine '%<pal1>Error: Size mismatch (%<.b d3> != %<.b d4>)'
-		bra.w	.PrintFailureDiff
+		bra.w	.print_failure_diff
 ; ===========================================================================
 
-	.ByteMismatch:
-		bsr.w	.PrintFailureHeader
+	.byte_mismatch:
+		bsr.w	.print_failure_header
 		Console.WriteLine '%<pal1>Error: Byte mismatch (%<.b -1(a1)> != %<.b -1(a5)>)'
-		bra.w	.PrintFailureDiff
+		bra.w	.print_failure_diff
 
 ; --------------------------------------------------------------
 ; Buffer flush function
 ; --------------------------------------------------------------
 
-.IdleFlush:
+IdleFlush:
 		addq.w	#8, d7				; set Carry flag, so FormatString is terminated after this flush
 		rts
 ; ===========================================================================
@@ -212,67 +212,67 @@ TestData:
 			<'+1234 00100011 +67'>
 
 	; #11: String decoding test #1
-	addTest { <.l .SampleString1> }, &
+	addTest { <.l SampleString1> }, &
 			<$D0,$00>, &
 			<'<String insertion test>'>
 
 	; #12: Buffer limit + String decoding test #1
-	addTest { <.l .SampleString1>, <.l .SampleString1> }, &
+	addTest { <.l SampleString1>, <.l SampleString1> }, &
 			<$D0,$D0,$00>, &
 			<'<String insertion test><String i'>
 
 	; #13: Buffer limit + String decoding test #2
-	addTest { <.l .SampleString2> }, &
+	addTest { <.l SampleString2> }, &
 			<$D0,$00>, &
 			<'This string takes all the buffer'>
 
 	; #14: Buffer limit + String decoding test #3
-	addTest { <.l .SampleString2>, <.l .SampleString2> }, &
+	addTest { <.l SampleString2>, <.l SampleString2> }, &
 			<$D0,$D0,$00>, &
 			<'This string takes all the buffer'>
 
 	; #15: Zero-length string decoding test #1
-	addTest { <.l .EmptyString> }, &
+	addTest { <.l EmptyString> }, &
 			<'[',$D0,']',$00>, &
 			<'[]'>
 
 	; #16: Zero-length string decoding test #2
-	addTest { <.l .EmptyString>, <.l .EmptyString>, <.l .EmptyString>, <.l .EmptyString> }, &
+	addTest { <.l EmptyString>, <.l EmptyString>, <.l EmptyString>, <.l EmptyString> }, &
 			<$D0,$D0,'-',$D0,$D0,$00>, &
 			<'-'>
 
 	; #17: Zero-length string decoding test #3
-	addTest { <.l .EmptyString>, <.l .EmptyString> }, &
+	addTest { <.l EmptyString>, <.l EmptyString> }, &
 			<'[',$D0,$D0,']',$00>, &
 			<'[]'>
 
 	; #18: Character decoding test #1
-	addTest { <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString> }, &
 			<$D0,$00>, &
 			<'a'>
 
 	; #19: Character decoding test #2
-	addTest { <.l .OneCharacterString>, <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString>, <.l OneCharacterString> }, &
 			<$D0,$D0,$00>, &
 			<'aa'>
 
 	; #20: Buffer limit + Character decoding test #1
-	addTest { <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString> }, &
 			<'This string takes all the buffer',$D0,$00>, &
 			<'This string takes all the buffer'>
 
 	; #21: Buffer limit + Character decoding test #2
-	addTest { <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString> }, &
 			<'This string takes almost all ..',$D0,$00>, &
 			<'This string takes almost all ..a'>
 
 	; #22: Buffer limit + Character decoding test #3
-	addTest { <.l .OneCharacterString>, <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString>, <.l OneCharacterString> }, &
 			<'This string takes almost all ..',$D0,$D0,$00>, &
 			<'This string takes almost all ..a'>
 
 	; #23: Buffer limit + Character decoding test #4
-	addTest { <.l .OneCharacterString> }, &
+	addTest { <.l OneCharacterString> }, &
 			<'This string takes almost all ..',$D0,'!',$00>, &
 			<'This string takes almost all ..a'>
 
@@ -307,7 +307,7 @@ TestData:
 			<''>
 
 	; #30: Empty output test #2
-	addTest { <.l .EmptyString> }, &
+	addTest { <.l EmptyString> }, &
 			<$D0,$00>, &
 			<''>
 
@@ -454,16 +454,16 @@ TestData:
 		dc.w	-1
 ; ===========================================================================
 
-.SampleString1:
+SampleString1:
 		dc.b	'<String insertion test>',0
 
-.SampleString2:
+SampleString2:
 		dc.b	'This string takes all the buffer',0
 
-.EmptyString:
+EmptyString:
 		dc.b	0
 
-.OneCharacterString:
+OneCharacterString:
 		dc.b	'a',0
 
 		even

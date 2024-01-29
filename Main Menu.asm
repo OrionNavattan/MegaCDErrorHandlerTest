@@ -41,7 +41,6 @@ MainMenuLoop:
 
 		bclr	#bitStart,d1
 		bne.w	StartTest		; branch if start is pressed
-	;	bne.s	MainMenuLoop
 		cmpi.b	#btnUp|btnDn,d1		; this can happen with worn joypads
 		beq.s	MainMenuLoop		; branch if it did
 		bclr	#bitUp,d1		; is up pressed?
@@ -159,7 +158,7 @@ TestPointers:	index *,,2
 ; ===========================================================================
 
 TestMainCPUAddErr:
-		move.w	1(a0),d0	; crash the CPU with a word operation at an odd address
+		move.w	(1).w,d0	; crash the CPU with a word operation at an odd address
 		rts
 ; ===========================================================================
 

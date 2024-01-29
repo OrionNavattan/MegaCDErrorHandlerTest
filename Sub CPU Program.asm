@@ -63,12 +63,12 @@ Main:
 
 	WaitReady:
 		cmpi.b	#$FF,(mcd_main_flag).w	; is main CPU OK?
-		bne.s	.mainOK				; branch if s0
+		bne.s	.mainOK				; branch if so
 		trap #0
 ; ===========================================================================
 
 	.mainOK:
-		cmp.b	(mcd_maincom_0).w,d0		; 	has main CPU acknowledged?
+		cmp.b	(mcd_maincom_0).w,d0		; has main CPU acknowledged?
 		bne.s	WaitReady			; branch if not
 
 		moveq	#0,d0
@@ -134,7 +134,7 @@ GenSubCmdIndex:	macro	name
 ; ===========================================================================
 
 TestAddrErr:
-		move.w	1(a0),d0	; crash the CPU with a word operation at an odd address
+		move.w	(1).w,d0	; crash the CPU with a word operation at an odd address
 		bra.s	CmdFinish
 ; ===========================================================================
 

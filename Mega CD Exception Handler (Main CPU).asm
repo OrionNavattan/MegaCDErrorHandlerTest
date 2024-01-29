@@ -1820,7 +1820,7 @@ GetSymbolByOffset:
 	.load_block:
 		move.l	(a1,d1.w),d0 			; d0 = relative offset
 		beq.s	.load_prev_block		; if block is empty, branch
-		lea 	(a1,d0.l),a3			; a3 = Block structure
+		lea 	(a1,d0.l),a3			; a3 = block structure
 		swap	d1						; d1 = offset
 
 		moveq	#0,d0
@@ -2763,6 +2763,7 @@ Console_SetPosAsXY:
 		move.w	d2,Console_ScreenRowReq(a3)	; console RAM => update start-of-line position
 		addq.w	#8,a3
 		move.w	(a3)+,(a3)+					; reset remaining characters counter
+
 	.quit:
 		popr.l	d1-d2/a3
 		rts
@@ -2939,6 +2940,7 @@ Console_Write:
 
 		bra.s	.set_palette_line_0			; $08	; codes E8-E9 : set palette line #0
 ; ===========================================================================
+
 		bra.s	.set_palette_line_1			; $0A	; codes EA-EB : set palette line #1
 ; ===========================================================================
 
