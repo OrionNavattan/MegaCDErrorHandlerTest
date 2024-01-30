@@ -99,11 +99,13 @@ MenuOps:	index *,,2
 		id_FirstSelection:	equ ptr_id
 		ptr	MainCPUAddrErr
 		ptr	MainCPUIllegal
-		ptr SubCPUAdderr
+		ptr	SubCPUAdderr
 		ptr	SubCPUIllegal
-		id_LastSelection:	equ ptr_id
 		ptr	FormatStringTst
+		ptr	ConsoleUtilsTst
+		id_LastSelection:	equ ptr_id-ptr_id_inc
 		arraysize MenuOps
+; ===========================================================================
 
 MainCPUAddrErr:
 		dc.b	' - Test Main CPU address error',0
@@ -125,6 +127,9 @@ FormatStringTst:
 		dc.b	' - Run FormatString Test',0
 		even
 
+ConsoleUtilsTst:
+		dc.b	' - Run Console Utils Test',0
+
 ; ----------------------------------------------------------------------------
 ; Subroutine to reset the console before and after running a test program
 ; ----------------------------------------------------------------------------
@@ -138,23 +143,28 @@ ClearTestConsole:
 		lea (vdp_data_port).l,a6
 		lea	vdp_control_port-vdp_data_port(a6),a5
 		bra.w	Console_Reset	; clear screen and reset console position
-; ===========================================================================
+
+; ----------------------------------------------------------------------------
+; Subroutine to enter the selected test
+; ----------------------------------------------------------------------------
 
 StartTest:
 		lea (sp),a3
 		bsr.s	ClearTestConsole	; clear console for test program
 
 		move.w	TestPointers(pc,d2.w),d2
-		jsr	TestPointers(pc,d2.w)		; run the test
+		jsr	TestPointers(pc,d2.w)		; run the test program
 
 		bra.w	MainMenu_Return	; return to main menu if test allows user to exit
+; ===========================================================================
 
 TestPointers:	index *,,2
-		ptr TestMainCPUAddErr
+		ptr	TestMainCPUAddErr
 		ptr	TestMainCPUIllegal
 		ptr	TestSubCPUAddrErr
-		ptr TestSubCPUIllegal
-		ptr FormatStringTest
+		ptr	TestSubCPUIllegal
+		ptr	FormatStringTest
+		ptr	ConsoleUtilsTest
 ; ===========================================================================
 
 TestMainCPUAddErr:

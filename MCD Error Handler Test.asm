@@ -130,6 +130,7 @@ WaitSubCPU:
 TestSymbols:
 		incbin "FormatString Test Symbols.kos"
 
+		include "Console Utils Test.asm"
 		include "KosM to PrgRAM.asm"
 		include "Kosinski Decompression.asm"
 
