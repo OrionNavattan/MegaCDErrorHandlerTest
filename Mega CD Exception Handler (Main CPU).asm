@@ -141,33 +141,9 @@ popr:		macro
 	if ~def(vdp_comm)
 vdp_comm:	macro inst,addr,cmdtarget,cmd,dest,adjustment
 
-		local type,rwd,command
+		command: = (\cmdtarget\_\cmd\)|((\addr&$3FFF)<<16)|((\addr&$C000)>>14)
 
-		if stricmp ("\cmdtarget","vram")
-		type: =	$21					; %10 0001
-		elseif stricmp ("\cmdtarget","cram")
-		type: = $2B					; %10 1011
-		elseif stricmp ("\cmdtarget","vsram")
-		type: = $25					; %10 0101
-		else inform 2,"Invalid VDP command destination (must be vram, cram, or vsram)."
-		endc
-
-		if stricmp ("\cmd","read")
-		rwd: =	$C					; %00 1100
-		elseif stricmp ("\cmd","write")
-		rwd: = 7					; %00 0111
-		elseif stricmp ("\cmd","dma")
-		rwd: = $27					; %10 0111
-		else inform 2,"Invalid VDP command type (must be read, write, or dma)."
-		endc
-
-		if stricmp ("\0","w")
-		command: = (((type&rwd)&3)<<30)|((addr&$3FFF)<<16)|(((type&rwd)&$FC)<<2)|((addr&$C000)>>14)&$FFFF ; AND to word-length
-		else
-		command: = (((type&rwd)&3)<<30)|((addr&$3FFF)<<16)|(((type&rwd)&$FC)<<2)|((addr&$C000)>>14)
-		endc
-
-		if strlen("\dest")>0
+		ifarg \dest
 			\inst\.\0	#command\adjustment\,\dest
 		else
 			\inst\.\0	command\adjustment\
@@ -228,6 +204,7 @@ program_ram:			equ 	$420000
 ; ----------------------------------------------------------------------------
 ; VDP register settings
 ; ----------------------------------------------------------------------------
+
 vdp_mode_register1:	equ $8000
 vdp_left_border:	equ vdp_mode_register1+$20	; blank leftmost 8px to bg colour
 vdp_enable_hint:	equ vdp_mode_register1+$10	; enable horizontal interrupts
@@ -304,6 +281,40 @@ vdp_kdebug_message:			equ $9E00
 vdp_kdebug_timer:			equ $9F00
 vdp_kdebug_timer_stop:		equ vdp_kdebug_timer
 vdp_kdebug_timer_start:		equ vdp_kdebug_timer+$C0
+
+	; High word of VDP read/write/DMA command
+	vdp_write_bit:	equ 14 ; CD0; 0 = read, 1 = write
+
+	vdp_write:		equ 1<<vdp_write_bit
+	vdp_dest_low:	equ $3FFF	; bits 0-13 of high word
+
+	; Low word of VDP read/write/DMA command
+	vdp_vram_copy_bit:	equ 6 ; CD4
+	vdp_dma_bit:		equ 7 ; CD5
+
+	vdp_vram_copy:	equ 1<<vdp_vram_copy_bit
+	vdp_dma:		equ 1<<vdp_dma_bit ; CD5
+	;vdp_dest_high:	equ $C000	; mask to isolation highest two bits of destination
+
+	vdp_vram:		equ 0
+	vdp_cram_write:	equ 1
+	vdp_vsram:		equ 2
+	vdp_cram_read:	equ 4
+	vdp_vram_byte_read:	equ 5
+
+	; VDP read/write commands (destination = 0)
+	vram_read:		equ ((vdp_vram&1)<<31)|((vdp_vram&$7E)<<3)						; $00000000
+	vram_write:		equ ((vdp_vram&1)<<31)|(vdp_write<<16)|((vdp_vram&$7E)<<3)		; $40000000
+	vram_dma:		equ ((vdp_vram&1)<<31)|(vdp_write<<16)|((vdp_vram&$7E)<<3)|vdp_dma	; $40000080
+	vram_copy:		equ	((vdp_vram&1)<<31)|((vdp_vram&$7E)<<3)|vdp_dma|vdp_vram_copy
+
+	vsram_read:		equ ((vdp_vsram&1)<<31)|((vdp_vsram&$7E)<<3)					; $00000010
+	vsram_write:	equ ((vdp_vsram&1)<<31)|(vdp_write<<16)|((vdp_vsram&$7E)<<3)	; $40000010
+	vsram_dma:		equ ((vdp_vsram&1)<<31)|(vdp_write<<16)|((vdp_vsram&$7E)<<3)|vdp_dma	; $40000090
+
+	cram_read:		equ ((vdp_cram_read&1)<<31)|((vdp_cram_read&$7E)<<3)					; $00000020
+	cram_write:		equ ((vdp_cram_write&1)<<31)|(vdp_write<<16)|((vdp_cram_write&$7E)<<3)	; $C0000000
+	cram_dma:		equ ((vdp_cram_write&1)<<31)|(vdp_write<<16)|((vdp_cram_write&$7E)<<3)|vdp_dma	; $C0000080
 
 ; --------------------------------------------------------------------------
 ; VDP colors

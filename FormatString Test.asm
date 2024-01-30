@@ -6,7 +6,7 @@ _bufferSize = $20					; if you change this, you have to alter all the buffer ove
 _canaryValue = $DC					; an arbitrary byte value, written after the buffer to detect overflows
 
 FormatStringTest:
-		lea TestSymbols(pc),a0
+		lea TestSymbols(pc),a0		; load the dummy symbol table used by this test
 		lea (wordram_2M).l,a1
 		bsr.w KosDec
 
