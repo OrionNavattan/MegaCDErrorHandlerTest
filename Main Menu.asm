@@ -4,6 +4,7 @@ MainMenu:
 		lea (sp),a3
 		bsr.w	ErrorHandler_SetupVDP
 		bsr.w	Error_InitConsole
+		clr.b	(v_menu_selection).w			; on very first load, start with first selection
 
 MainMenu_Return:
 		Console.WriteLine	'%<pal1>MEGA CD ERROR HANDLER TEST ROM'	; title and instructions are static colors
@@ -16,9 +17,8 @@ MainMenu_Return:
 		movem.w	d0/d1,(v_options_coords).w	; save start coordinates for redrawing later
 		popr.l	d0/d1
 
-		moveq	#id_FirstSelection,d5	; initial menu selection
-		moveq	#id_FirstSelection,d2
-		move.b	d2,(v_menu_selection).w	; save in RAM
+		moveq	#0,d2
+		move.b	(v_menu_selection).w,d2		; get initial selection
 		bra.s	InitialDraw
 ; ===========================================================================
 
@@ -73,13 +73,13 @@ RedrawMenu:
 		move.b	d2,(v_menu_selection).w	; save selection for next time
 		movem.w	(v_options_coords).w,d0/d1
 		bsr.w	Console_SetPosAsXY	; set start coordinates
-		moveq	#id_FirstSelection,d5		; index to data for first option
 		disable_ints
 
 InitialDraw:
+		moveq	#id_FirstSelection,d5		; index to data for first option
 		moveq	#(sizeof_MenuOps/2)-1,d3	; redraw all options
 
-	.redrawloop:
+	.drawloop:
 		move.w	#tile_line3,d1		; non-selected options are purple
 		cmp.b	d2,d5			; is this the selected option?
 		bne.s	.notselected	; branch if not
@@ -91,7 +91,7 @@ InitialDraw:
 		bsr.w	Console_WriteLine_WithPattern	; draw the option text
 		bsr.w	Console_StartNewLine		; skip a line
 		addq.b	#2,d5			; next option
-		dbf	d3,.redrawloop		; repeat for all options
+		dbf	d3,.drawloop		; repeat for all options
 		bra.w	MainMenuLoop	; return to loop start
 ; ===========================================================================
 
@@ -131,10 +131,32 @@ ConsoleUtilsTst:
 		dc.b	' - Run Console Utils Test',0
 
 ; ----------------------------------------------------------------------------
-; Subroutine to reset the console before and after running a test program
+; Common finish-up routine to end a test
 ; ----------------------------------------------------------------------------
 
 TestDone:
+		bsr.w	Console_StartNewLine
+		Console.WriteLine '%<pal0>Press Start to return to Main Menu'
+		enable_ints
+
+	.waitloop:
+		cmpi.b	#$FF,(mcd_sub_flag).l	; is sub CPU OK?
+		bne.s	.subOK			; branch if so
+		trap #0
+
+	.subok:
+		bsr.w	VSync	; wait for VBlank
+		lea (v_joypad_hold).w,a0	; read the joypad
+		lea (port_1_data).l,a1
+		bsr.w	ReadJoypad
+		andi.b	#btnStart,d1	; d1 still contains pressed joypad buttons
+		beq.s	.waitloop		; wait until start is pressed
+		; fall through
+
+; ----------------------------------------------------------------------------
+; Subroutine to reset the console before and after running a test program
+; ----------------------------------------------------------------------------
+
 		lea 4(sp),a3	; if returning from a finished test, skip over return address
 
 ClearTestConsole:

@@ -58,24 +58,6 @@ FormatStringTest:
 
 		Console.WriteLine 'Number of completed tests: %<.b d1 deci>'
 		Console.WriteLine '%<pal1>ALL TESTS HAVE PASSED SUCCESSFULLY'
-
-	.common_finish:
-		bsr.w	Console_StartNewLine
-		Console.WriteLine '%<pal0>Press Start to return to Main Menu'
-		enable_ints
-
-	.waitloop:
-		cmpi.b	#$FF,(mcd_sub_flag).l	; is sub CPU OK?
-		bne.s	.subOK			; branch if so
-		trap #0
-
-	.subok:
-		bsr.w	VSync	; wait for VBlank
-		lea (v_joypad_hold).w,a0	; read the joypad
-		lea (port_1_data).l,a1
-		bsr.w	ReadJoypad
-		andi.b	#btnStart,d1	; d1 still contains pressed joypad buttons
-		beq.s	.waitloop		; wait until start is pressed
 		bra.w	TestDone
 ; ===========================================================================
 
@@ -87,15 +69,15 @@ FormatStringTest:
 		Console.WriteLine '%<pal0>Got:%<endl>%<pal2>"%<.l a2 str>"'
 		Console.WriteLine '%<pal0>Expected:%<endl>%<pal2>"%<.l a3 str>"'
 
-	.HaltTests:
+	.halt_tests:
 		Console.WriteLine '%<pal1>TEST FAILURE, STOPPING'
-		bra.w	.common_finish
+		bra.w	TestDone
 ; ===========================================================================
 
 	.buffer_overflow:
 		bsr.w	.print_failure_header
-		Console.WriteLine '%<pal1>Error: Writting past the end of buffer'
-		bra.s .HaltTests
+		Console.WriteLine '%<pal1>Error: Writing past the end of buffer'
+		bra.s .halt_tests
 ; ===========================================================================
 
 	.size_mismatch:

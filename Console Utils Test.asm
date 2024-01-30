@@ -7,26 +7,7 @@ ConsoleUtilsTest:
 		; found at "RegisterData" byte-array (see below)
 		movem.l	RegisterData(pc),d0-a6
 
-		bsr.s TestProgram
-
-ConsoleUtilsTest_Finish:
-		bsr.w	Console_StartNewLine
-		Console.WriteLine '%<pal0>Press Start to return to Main Menu'
-		enable_ints
-
-	.waitloop:
-		cmpi.b	#$FF,(mcd_sub_flag).l	; is sub CPU OK?
-		bne.s	.subOK			; branch if so
-		trap #0
-
-	.subok:
-		bsr.w	VSync	; wait for VBlank
-		lea (v_joypad_hold).w,a0	; read the joypad
-		lea (port_1_data).l,a1
-		bsr.w	ReadJoypad
-		andi.b	#btnStart,d1	; d1 still contains pressed joypad buttons
-		beq.s	.waitloop		; wait until start is pressed
-
+		bsr.s	TestProgram
 		bra.w	TestDone
 ; ===========================================================================
 
@@ -95,7 +76,7 @@ TestProgram:
 		Console.BreakLine
 		Console.WriteLine "ALL DONE!"
 
-		bsr.s CheckRegisterIntergity	; must be a bsr due to how CheckRegisterIntergity handles test abortion
+		bsr.s CheckRegisterIntergity	; has to be a bsr due to how CheckRegisterIntergity handles test abortion
 		rts
 
 ; --------------------------------------------------------------
