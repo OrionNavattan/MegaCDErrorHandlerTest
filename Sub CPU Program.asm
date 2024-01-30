@@ -81,7 +81,7 @@ Main:
 MainLoop:
 		cmpi.b	#$FF,(mcd_main_flag).w	; is main CPU OK?
 		bne.s	.mainok				; branch if it is
-		trap #0
+		trap #0				; main CPU crash
 ; ===========================================================================
 
 	.mainok:

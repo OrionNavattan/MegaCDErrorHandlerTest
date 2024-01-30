@@ -16,6 +16,7 @@ EntryPoint:
 		move.l	d7,tmss_sega-mcd_mem_mode(a3)	; satisfy the TMSS
 
    .wait_dma:
+   		move.l	d4,d3					; clear d3 so it can be used for init error index if necessary
 		move.w	(a6),ccr				; copy status register to CCR, clearing the VDP write latch and setting the overflow flag if a DMA is in progress
 		bvs.s	.wait_dma				; if a DMA was in progress during a soft reset, wait until it is finished
 
@@ -78,7 +79,6 @@ EntryPoint:
 	.findloop:
 		adda.w	(a2)+,a1			; a1 = pointer to BIOS data
 		addq.w	#4,a1					; skip over BIOS payload address
-		;lea	cd_bios_name-cd_bios(a4),a6			; get BIOS name
 		movea.l	a4,a6				; get BIOS name
 
 	.checkname:
@@ -99,7 +99,7 @@ EntryPoint:
 		movea.l	a0,a1				; reset a1
 		dbf	d0,.findloop			; loop until all BIOSes are checked
 
-	.notfound:
+	;.notfound:
 		bra.w	InitFailure2
 
 .found:
@@ -127,7 +127,7 @@ EntryPoint:
 		bset	#sub_bus_request_bit,mcd_reset-mcd_mem_mode(a3)			; request the sub CPU bus
 		dbne	d2,.req_bus							; if it has not been granted, wait
 		bne.s	.reset									; branch if it has been granted
-		trap #1							; if sub CPU is unresponsive
+		bra.w	InitFailure3							; if sub CPU is unresponsive
 
 	.reset:
 		bclr	#sub_reset_bit,mcd_reset-mcd_mem_mode(a3)		; set sub CPU to reset
@@ -206,21 +206,12 @@ EntryPoint:
 		move.l d4,(a0)+		; clear 4 bytes of wordram
 		dbf d5,.clear_wordram	; repeat for entire wordram
 
-	;.gotomain:
+	.gotomain:
 		bra.w	WaitSubCPU
 ; ===========================================================================
 
 SubCrash:
 		trap #0		; enter sub CPU error handler
-; ===========================================================================
-
-InitFailure1:
-		move.w	#cRed,(a5)				; if no Mega CD device is attached, set BG color to red
-		bra.s	*					; stay here forever
-; ===========================================================================
-InitFailure2:
-		move.w	#cBlue,(a5)				; if no matching BIOS is found, set BG color to blue
-		bra.s	*					; stay here forever
 ; ===========================================================================
 
 SetupValues:
@@ -329,4 +320,114 @@ MCDBIOS_Wondermega2:
 		dc.l	$416000
 		dc.b	"WONDERMEGA2 BOOTROM",0		; Victor WonderMega 2, JVC X'Eye
 		dc.b	0
+		even
+; ===========================================================================
+
+; d3 is already 0
+InitFailure3:
+		addq.b	#1,d3		; 2 = sub CPU timeout
+
+InitFailure2:
+		addq.b	#1,d3		; 1 = unidentified sub CPU
+							; 0 = no sub CPU found
+InitFailure1:
+		disable_ints
+		lea	-sizeof_Console_RAM(sp),sp
+		lea (sp),a3
+		pushr.w	d3
+		bsr.w	ErrorHandler_SetupVDP
+		bsr.w	Error_InitConsole		; set up console
+		popr.w	d3
+
+		add.w	d3,d3
+		move.w	FailureText_Index(pc,d3.w),d3
+		lea FailureText_Index(pc,d3.w),a5	; a5 = index table of failure message
+		move.w	-6(a5),d5				; d5 = loop counter
+		movem.w	-4(a5),d0/d1			; d0/d1 = starting x and y pos
+		bsr.w	Console_SetPosAsXY		; set starting pos for message
+		moveq	#0,d4			; first line of message
+
+	.loop:
+		move.w	(a5,d4.w),d3
+		lea	(a5,d3.w),a0	; a0 = line of message
+		bsr.w	Console_WriteLine	; write line
+		bsr.w	Console_StartNewLine		; skip a line
+		addq.w	#2,d4		; next line
+		dbf	d5,.loop		; repeat for all lines of message
+
+	.done:
+		nop
+		nop
+		bra.s	.done		; stay here forever
+; ===========================================================================
+
+FailureText_Index:	index *
+		ptr	SubCPU_NotFound_Index	; 0
+		ptr	SubCPU_NotIdentified_Index ; 1
+		ptr	SubCPU_Unresponsive_Index ; 2
+; ===========================================================================
+
+		dc.w	(sizeof_SubCPU_NotFound_Index/2)-1
+		dc.w	0,9	; x pos, y pos
+SubCPU_NotFound_Index:	index *,,2
+		ptr	.line1
+		ptr	.line2
+		ptr	.line3
+		ptr	.line4
+		ptr	.line5
+		arraysize	SubCPU_NotFound_Index
+
+
+.line1:	dc.b	'      Sorry, this test requires the     ',0
+		even
+.line2:	dc.b	'     Mega CD addon or equivalent, or    ',0
+		even
+.line3:	dc.b	'      the BlastEm or GenesisPlusGX      ',0
+		even
+.line4:	dc.b	'       emulators with a properly        ',0
+		even
+.line5:	dc.b	'            configured BIOS.            ',0
+		even
+; ===========================================================================
+
+		dc.w	(sizeof_SubCPU_NotIdentified_Index/2)-1
+		dc.w	0,9	; x pos, y pos
+SubCPU_NotIdentified_Index:	index *,,2
+		ptr	.line1
+		ptr	.line2
+		ptr	.line3
+		ptr	.line4
+		ptr	.line5
+		arraysize	SubCPU_NotIdentified_Index
+
+
+.line1:	dc.b	'   A Mega CD device was detected, but   ',0
+		even
+.line2:	dc.b	'   it could not be identified. Please   ',0
+		even
+.line3:	dc.b	'     contact OrionNavattan, as this     ',0
+		even
+.line4:	dc.b	'      may be a previously unknown       ',0
+		even
+.line5:	dc.b	'            Mega CD device.             ',0
+		even
+; ===========================================================================
+
+		dc.w	(sizeof_SubCPU_Unresponsive_Index/2)-1
+		dc.w	0,10	; x pos, y pos
+SubCPU_Unresponsive_Index:	index *,,2
+		ptr	.line1
+		ptr	.line2
+		ptr	.line3
+		ptr	.line4
+		arraysize	SubCPU_Unresponsive_Index
+
+
+.line1:	dc.b	'      The attached Mega CD device       ',0
+		even
+.line2:	dc.b	'    is not responding. Please verify    ',0
+		even
+.line3:	dc.b	'        that it is connected or         ',0
+		even
+.line4:	dc.b	'    otherwise functioning correctly.    ',0
 		even
