@@ -48,9 +48,6 @@ Line1111Emu:
 ErrorExcept:
 	__ErrorMessage "MAIN CPU: ERROR EXCEPTION", _eh_show_sr_usp
 
-SubCPUTimeout:
-	__ErrorMessage "MAIN CPU: TIMED OUT WAITING FOR SUB CPU", _eh_show_sr_usp
-
 ; ============================================================================
 ; ----------------------------------------------------------------------------
 ; Macro definitions

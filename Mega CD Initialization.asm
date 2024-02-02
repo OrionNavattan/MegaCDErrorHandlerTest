@@ -224,8 +224,8 @@ SetupValues:
 		dc.l	vdp_data_port		; a5
 		dc.l	vdp_control_port	; a6
 
-		dc.w	vdp_mode_register2-vdp_mode_register1	; VDP Reg increment value & opposite initialisation flag for Z80
-		dc.w	vdp_md_color				; $8004; normal color mode, horizontal interrupts disabled
+		dc.w	vdp_mode_register2-vdp_mode_register1	; d1, VDP Reg increment value & opposite initialisation flag for Z80
+		dc.w	vdp_md_color				; d2, $8004; normal color mode, horizontal interrupts disabled
 	SetupVDP:
 		dc.b	(vdp_enable_vint|vdp_enable_dma|vdp_ntsc_display|vdp_md_display)&$FF ;  $8134; mode 5, NTSC, vertical interrupts and DMA enabled
 		dc.b	(vdp_fg_nametable+(vram_fg>>10))&$FF	; $8230; foreground nametable starts at $C000
@@ -378,15 +378,15 @@ SubCPU_NotFound_Index:	index *,,2
 		arraysize	SubCPU_NotFound_Index
 
 
-.line1:	dc.b	'      Sorry, this test requires the     ',0
+.line1:	dc.b	'     Sorry, this test requires the      ',0
 		even
-.line2:	dc.b	'     Mega CD addon or equivalent, or    ',0
+.line2:	dc.b	'    Mega CD addon or equivalent, or     ',0
 		even
-.line3:	dc.b	'      the BlastEm or GenesisPlusGX      ',0
+.line3:	dc.b	'       Genesis Plus GX, BlastEm,        ',0
 		even
-.line4:	dc.b	'       emulators with a properly        ',0
+.line4:	dc.b	'      Mega EverDrive Pro or MegaSD      ',0
 		even
-.line5:	dc.b	'            configured BIOS.            ',0
+.line5:	dc.b	'    with a properly configured BIOS.    ',0
 		even
 ; ===========================================================================
 

@@ -49,14 +49,14 @@ MainMenuLoop:
 
 	;.down:
 		cmpi.b	#id_LastSelection,d2
-		beq.s	.alreadymax			; branch if we're already on the highest selection
+		beq.s	.alreadymax			; branch if already on last option
 		addq.w	#2,d2		; move selection down
 		bra.s	RedrawMenu
 ; ===========================================================================
 
 	.up:
 		tst.b	d2
-		beq.s	.already0	; branch if selection is already 0
+		beq.s	.already0	; branch if already on first option
 		subq.w	#2,d2		; move selection up
 		bra.s	RedrawMenu
 ; ===========================================================================
@@ -103,6 +103,7 @@ MenuOps:	index *,,2
 		ptr	SubCPUIllegal
 		ptr	FormatStringTst
 		ptr	ConsoleUtilsTst
+		ptr	ConsoleFlowTst
 		id_LastSelection:	equ ptr_id-ptr_id_inc
 		arraysize MenuOps
 ; ===========================================================================
@@ -129,6 +130,11 @@ FormatStringTst:
 
 ConsoleUtilsTst:
 		dc.b	' - Run Console Utils Test',0
+		even
+
+ConsoleFlowTst:
+		dc.b	' - Run Console Flow Test',0
+		even
 
 ; ----------------------------------------------------------------------------
 ; Common finish-up routine to end a test
@@ -187,6 +193,7 @@ TestPointers:	index *,,2
 		ptr	TestSubCPUIllegal
 		ptr	FormatStringTest
 		ptr	ConsoleUtilsTest
+		ptr	ConsoleFlowTest
 ; ===========================================================================
 
 TestMainCPUAddErr:

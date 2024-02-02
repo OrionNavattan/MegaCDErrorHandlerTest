@@ -39,8 +39,7 @@ Vectors:
 		dc.l VBlank					; IRQ level 6 (vertical retrace interrupt)
 		dc.l ErrorExcept					; IRQ level 7
 		dc.l SubCPUError						; Trap 0
-		dc.l SubCPUTimeout					; 	; Trap 1
-		dcb.l 14,ErrorExcept				; TRAP #02..#15 exceptions
+		dcb.l 15,ErrorExcept				; Trap 1-15 exceptions
 		dcb.l 16,ErrorExcept				; Unused (reserved)
 
 Header:
@@ -98,7 +97,6 @@ SubCPUCmd:
 		bne.s	.waitsubdone			; if not, wait
 		popr.l	a0
 		rts
-
 ; ===========================================================================
 
 WaitSubCPU:
@@ -131,6 +129,8 @@ TestSymbols:
 		incbin "FormatString Test Symbols.kos"
 
 		include "Console Utils Test.asm"
+		include "CheckRegisterIntegrity.asm"
+		include "Console Flow Test.asm"
 		include "KosM to PrgRAM.asm"
 		include "Kosinski Decompression.asm"
 
