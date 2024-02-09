@@ -324,10 +324,10 @@ MCDBIOS_Wondermega2:
 
 ; d3 is already 0
 InitFailure3:
-		addq.b	#1,d3		; 2 = sub CPU timeout
+		addq.b	#2,d3		; 4 = sub CPU timeout
 
 InitFailure2:
-		addq.b	#1,d3		; 1 = unidentified sub CPU
+		addq.b	#2,d3		; 2 = unidentified sub CPU
 							; 0 = no sub CPU found
 InitFailure1:
 		disable_ints
@@ -338,7 +338,6 @@ InitFailure1:
 		bsr.w	Error_InitConsole		; set up console
 		popr.w	d3
 
-		add.w	d3,d3
 		move.w	FailureText_Index(pc,d3.w),d3
 		lea FailureText_Index(pc,d3.w),a5	; a5 = index table of failure message
 		move.w	-6(a5),d5				; d5 = loop counter
