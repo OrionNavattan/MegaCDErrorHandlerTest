@@ -336,7 +336,7 @@ KDebug: macro
 
 	elseif strcmp("\0","endtimer")|strcmp("\0","EndTimer")
 		move.w	sr,-(sp)
-		move.w	vdp_kdebug_timer_stop,(vdp_control_port).l
+		move.w	#vdp_kdebug_timer_stop,(vdp_control_port).l
 		move.w	(sp)+,sr
 
 	elseif strcmp("\0","breakpoint")|strcmp("\0","BreakPoint")
