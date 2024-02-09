@@ -198,19 +198,31 @@ TestPointers:	index *,,2
 
 TestMainCPUAddErr:
 		move.w	(1).w,d0	; crash the CPU with a word operation at an odd address
-		rts
+		bra.s	MainCPUCrashFail
 ; ===========================================================================
 
 TestMainCPUIllegal:
 		illegal		; trigger illegal instruction exception
-		rts
+
+MainCPUCrashFail:
+		Console.WriteLine	'%<pal1>TEST FAILED!'
+		Console.WriteLine	'%<pal0>This should have crashed the main CPU,'
+		Console.WriteLine	'but it failed to do so!'
+		bra.w	TestDone
 ; ===========================================================================
 
 TestSubCPUAddrErr:
 		moveq	#subcmd_TestAddrErr,d0		; send command to crash sub CPU with address error
-		bra.w	SubCPUCmd
+		bsr.w	SubCPUCmd
+		bra.s	SubCPUCrashFail
 ; ===========================================================================
 
 TestSubCPUIllegal:
 		moveq	#subcmd_TestIllegal,d0		; send command to crash sub CPU with illegal instruction
-		bra.w	SubCPUCmd
+		bsr.w	SubCPUCmd
+
+SubCPUCrashFail:
+		Console.WriteLine	'%<pal1>TEST FAILED!'
+		Console.WriteLine	'%<pal0>This should have crashed the sub CPU,'
+		Console.WriteLine	'but it failed to do so!'
+		bra.w	TestDone
