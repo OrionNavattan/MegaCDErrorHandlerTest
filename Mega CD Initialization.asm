@@ -12,15 +12,17 @@ EntryPoint:
 		move.b	console_version-mcd_mem_mode(a3),d6	; load hardware version
 		move.b	d6,d3					; copy to d3 for checking revision (d6 will be used later to set region and speed)
 		andi.b	#console_revision,d3			; get only hardware version ID
-		beq.s	.wait_dma				; if Model 1 VA4 or earlier (ID = 0), branch
+		beq.s	.no_tmss				; if Model 1 VA4 or earlier (ID = 0), branch
 		move.l	d7,tmss_sega-mcd_mem_mode(a3)	; satisfy the TMSS
 
-   .wait_dma:
+	.no_tmss:
    		move.l	d4,d3					; clear d3 so it can be used for init error index if necessary
+
+	.wait_dma:
 		move.w	(a6),ccr				; copy status register to CCR, clearing the VDP write latch and setting the overflow flag if a DMA is in progress
 		bvs.s	.wait_dma				; if a DMA was in progress during a soft reset, wait until it is finished
 
-   .loop_vdp:
+	.loop_vdp:
 		move.w	d2,(a6)					; set VDP register
 		add.w	d1,d2					; advance register ID
 		move.b	(a0)+,d2				; load next register value
@@ -30,7 +32,7 @@ EntryPoint:
 		move.w	d4,(a5)					; set DMA fill value (0000), clearing the VRAM
 
 		move.w	(a0)+,d5				; (sizeof_workram/4)-1
-   .loop_ram:
+	.loop_ram:
 		move.l	d4,(a2)+				; clear 4 bytes of workram
 		dbf	d5,.loop_ram				; repeat until entire workram has been cleared
 
@@ -41,55 +43,55 @@ EntryPoint:
 
 		move.l	(a0)+,(a6)				; set VDP to VSRAM write
 		moveq	#(sizeof_vsram/4)-1,d5			; loop counter
-   .loop_vsram:
+	.loop_vsram:
 		move.l	d4,(a5)					; clear 4 bytes of VSRAM
 		dbf	d5,.loop_vsram				; repeat until entire VSRAM has been cleared
 
 		move.l	(a0)+,(a6)				; set VDP to CRAM write
 		moveq	#(sizeof_pal_all/4)-1,d5		; loop counter
-   .loop_cram:
+	.loop_cram:
 		move.l	d4,(a5)					; clear two palette entries
 		dbf	d5,.loop_cram				; repeat until entire CRAM has been cleared
 
 		move.w	(a0)+,d5				; sizeof_z80_ram-1
-   .clear_Z80_ram:
+	.clear_Z80_ram:
 		move.b 	d4,(a1)+				; clear one byte of Z80 RAM
 		dbf	d5,.clear_Z80_ram			; repeat until entire Z80 RAM has been cleared
 
 		moveq	#4-1,d5					; set number of PSG channels to mute
-   .psg_loop:
+	.psg_loop:
 		move.b	(a0)+,psg_input-vdp_data_port(a5)	; set the PSG channel volume to null (no sound)
 		dbf	d5,.psg_loop				; repeat for all channels
 
-		btst	#console_mcd_bit,d6	; is there anything in the expansion slot?
-		bne.w	InitFailure1		; branch if not
-
 	;.find_bios:
+		btst	#console_mcd_bit,d6	; is there anything in the expansion slot?
+		bne.w	InitFailure1		; if not, branch
 		cmp.l	cd_bios_signature-cd_bios_name(a4),d7	; is the "SEGA" signature present?
 		bne.w	InitFailure1					; if not, branch
 		cmpi.w	#"BR",cd_bios_sw_type-cd_bios_name(a4)		; is the "Boot ROM" software type present?
 		bne.w	InitFailure1					; if not, branch
 
 		; Determine which MEGA CD device is attached.
-		movea.l	a0,a1				; a1 & a2 = pointers to BIOS data
-		movea.l a0,a2
+		movea.l	a0,a2				; a2 = index table of BIOS data
+		addq.w	#4,a0
+		movea.l a0,a1				; a1 = base address of index + 4 (to skip over payload address)
 		moveq	#(sizeof_MCDBIOSList/2)-1,d0
 		moveq	#id_MCDBIOS_JP1,d7		; first BIOS ID
 
 	.findloop:
 		adda.w	(a2)+,a1			; a1 = pointer to BIOS data
-		addq.w	#4,a1					; skip over BIOS payload address
-		movea.l	a4,a6				; get BIOS name
+		movea.l	a4,a5				; a6 = BIOS name in bootrom
 
 	.checkname:
 		move.b	(a1)+,d1			; get character
 		beq.s	.namematch			; branch if we've reached the end of the name
-		cmp.b	(a6)+,d1			; does the BIOS name match so far?
+		cmp.b	(a5)+,d1			; does the BIOS name match so far?
 		bne.s	.nextBIOS			; if not, go check the next BIOS
 		bra.s	.checkname			; loop until name is fully checked
+; ===========================================================================
 
 	.namematch:
-		move.b	(a1)+,d1			; is this Sub CPU BIOS address region specific?
+		move.b	(a1)+,d1			; is this BIOS region specific?
 		beq.s	.found				; branch if not
 		cmp.b	cd_bios_region-cd_bios_name(a4),d1			; does the BIOS region match?
 		beq.s	.found				; branch if so
@@ -101,6 +103,7 @@ EntryPoint:
 
 	;.notfound:
 		bra.w	InitFailure2
+; ===========================================================================
 
 .found:
 		move.b	d7,(v_bios_id).w				; save BIOS ID
@@ -188,13 +191,14 @@ EntryPoint:
 		bsr.w	Decompress_SubCPUProgram	; decompress the sub CPU program
 
 		move.b	#sub_bios_end>>9,mcd_write_protect-mcd_mem_mode(a3)		; enable write protect on BIOS code in program RAM
+		move.b	#sub_run,mcd_reset-mcd_mem_mode(a3)		; start the sub CPU
 
-		move.b	#sub_run,mcd_reset-mcd_mem_mode(a3)
+		move.w	#vdp_enable_vint,d0
+		or.b	SetupVDP(pc),d0
+		move.w	d0,(a6)			; enable VBlank on VDP
 		enable_ints
 
 	.waitwordram:
-		cmpi.b	#$FF,mcd_sub_flag-mcd_mem_mode(a3)	; is sub CPU OK?
-		beq.w	SubCrash				; branch if not
 		btst	#wordram_swapmain_bit,(a3)	; has sub CPU given us the word RAM?
 		beq.s	.waitwordram		; if not, wait
 
@@ -206,12 +210,7 @@ EntryPoint:
 		move.l d4,(a0)+		; clear 4 bytes of wordram
 		dbf d5,.clear_wordram	; repeat for entire wordram
 
-	.gotomain:
-		bra.w	WaitSubCPU
-; ===========================================================================
-
-SubCrash:
-		trap #0		; enter sub CPU error handler
+		bra.w	WaitSubCPU	; wait for sub CPU initialization to finish
 ; ===========================================================================
 
 SetupValues:
@@ -227,7 +226,7 @@ SetupValues:
 		dc.w	vdp_mode_register2-vdp_mode_register1	; d1, VDP Reg increment value & opposite initialisation flag for Z80
 		dc.w	vdp_md_color				; d2, $8004; normal color mode, horizontal interrupts disabled
 	SetupVDP:
-		dc.b	(vdp_enable_vint|vdp_enable_dma|vdp_ntsc_display|vdp_md_display)&$FF ;  $8134; mode 5, NTSC, vertical interrupts and DMA enabled
+		dc.b	(vdp_enable_dma|vdp_ntsc_display|vdp_md_display)&$FF ;  $8134; mode 5, NTSC, DMA enabled
 		dc.b	(vdp_fg_nametable+(vram_fg>>10))&$FF	; $8230; foreground nametable starts at $C000
 		dc.b	(vdp_window_nametable+(vram_window>>10))&$FF ; $8328; window nametable starts at $A000
 		dc.b	(vdp_bg_nametable+(vram_bg>>13))&$FF	; $8407; background nametable starts at $E000
@@ -254,11 +253,11 @@ SetupValues:
 
 		arraysize SetupVDP
 
-		dc.l	$40000080				; DMA fill VRAM
+		dc.l	vram_dma				; DMA fill VRAM
 		dc.w	(sizeof_workram/4)-1	; workram clear loop counter
 		dc.w	vdp_auto_inc+2				; VDP increment
-		dc.l	$40000010				; VSRAM write mode
-		dc.l	$C0000000				; CRAM write mode
+		dc.l	vsram_write				; VSRAM write mode
+		dc.l	cram_write				; CRAM write mode
    		dc.w	sizeof_z80_ram-1		; Z80 ram clear loop counter
 
 		dc.b	$9F,$BF,$DF,$FF				; PSG mute values (PSG 1 to 4)
