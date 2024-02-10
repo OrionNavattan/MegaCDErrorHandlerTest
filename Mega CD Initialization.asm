@@ -1,7 +1,11 @@
 EntryPoint:
 		lea	SetupValues(pc),a0			; load setup array
-		move.w	(a0)+,sr				; ensure interrupts are disabled (e.g., if falling through from an error reset a la S&K)
+		move.w	(a0)+,sr				; ensure interrupts are disabled (e.g., if falling through from an error reset a la S3K)
 		moveq	#0,d4					; DMA fill/memory clear/Z80 stop bit test value
+		move.l	d4,d1					; clear d1, d2, d3, and d6 (d0, d5, and d7 are used with longwords or moveq first thing, so skip them)
+		move.l	d4,d2
+		move.l	d4,d3
+		move.l	d4,d6
 		movea.l d4,a4
 		move.l	a4,usp					; clear user stack pointer
 		movem.l (a0)+,a1-a6				; Z80 RAM start, work RAM start, MCD memory mode register, CD BIOS name in bootrom header, VDP data port, VDP control port
@@ -12,11 +16,9 @@ EntryPoint:
 		move.b	console_version-mcd_mem_mode(a3),d6	; load hardware version
 		move.b	d6,d3					; copy to d3 for checking revision (d6 will be used later to set region and speed)
 		andi.b	#console_revision,d3			; get only hardware version ID
-		beq.s	.no_tmss				; if Model 1 VA4 or earlier (ID = 0), branch
+		beq.s	.wait_dma				; if Model 1 VA4 or earlier (ID = 0), branch
+   		move.l	d4,d3					; clear d3 so it can be used for init error index if necessary (unnecessary if no TMSS, as the above andi will have cleared the register)
 		move.l	d7,tmss_sega-mcd_mem_mode(a3)	; satisfy the TMSS
-
-	.no_tmss:
-   		move.l	d4,d3					; clear d3 so it can be used for init error index if necessary
 
 	.wait_dma:
 		move.w	(a6),ccr				; copy status register to CCR, clearing the VDP write latch and setting the overflow flag if a DMA is in progress

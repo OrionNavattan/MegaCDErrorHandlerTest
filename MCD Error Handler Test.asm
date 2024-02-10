@@ -77,11 +77,15 @@ VBlank:
 SubCPUCmd:
 		pushr.l	a0
 		lea (mcd_subcom_0).l,a0
+		cmpi.b	#$FF,mcd_sub_flag-mcd_subcom_0(a0)	; is sub CPU OK?
+		beq.s	.subcrash							; branch if not
 		move.w	d0,mcd_maincom_0-mcd_subcom_0(a0)	; send command ID to sub CPU
 
 	.waitsub:
 		cmpi.b	#$FF,mcd_sub_flag-mcd_subcom_0(a0)	; is sub CPU OK?
 		bne.s	.subOK				; branch if it is
+
+	.subcrash:
 		trap #0
 
 	.subok:
