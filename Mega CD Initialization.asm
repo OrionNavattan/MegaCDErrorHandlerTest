@@ -339,9 +339,9 @@ InitFailure1:
 		popr.w	d3
 
 		move.w	FailureText_Index(pc,d3.w),d3
-		lea FailureText_Index(pc,d3.w),a5	; a5 = index table of failure message
-		move.w	-6(a5),d5				; d5 = loop counter
-		movem.w	-4(a5),d0/d1			; d0/d1 = starting x and y pos
+		lea FailureText_Index-6(pc,d3.w),a5		; a5 = start of data for failure message
+		move.w	(a5)+,d5				; d5 = loop counter
+		movem.w	(a5)+,d0/d1			; d0/d1 = starting x and y pos
 		bsr.w	Console_SetPosAsXY		; set starting pos for message
 		moveq	#0,d4			; first line of message
 
