@@ -361,10 +361,10 @@ InitFailure1:
 		bra.s	.done		; stay here forever
 ; ===========================================================================
 
-FailureText_Index:	index *
+FailureText_Index:	index *,,2
 		ptr	SubCPU_NotFound_Index	; 0
-		ptr	SubCPU_NotIdentified_Index ; 1
-		ptr	SubCPU_Unresponsive_Index ; 2
+		ptr	SubCPU_NotIdentified_Index ; 2
+		ptr	SubCPU_Unresponsive_Index ; 4
 ; ===========================================================================
 
 		dc.w	(sizeof_SubCPU_NotFound_Index/2)-1

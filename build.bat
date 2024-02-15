@@ -11,7 +11,7 @@ echo Compressing Sub CPU symbols.
 "mdcomp/koscmp.exe"	"Sub CPU Symbols.bin" "Sub CPU Symbols.kos"
 
 echo Compressing Sub CPU program.
-"clownlzss.exe" -k -m=0x2000 "Sub CPU Program.bin" "Sub CPU Program.kosm"
+ "Modulise.exe" "mdcomp/koscmp.exe" $2000 "Sub CPU Program.bin" "Sub CPU Program.kosm" -noindex -nolast -actualcount
 
 IF NOT EXIST "Sub CPU Program.kosm" PAUSE & EXIT 2
 
