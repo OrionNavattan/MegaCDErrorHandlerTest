@@ -40,7 +40,7 @@ Init:
 		move.l	(a0)+,(a1)+	; set table entry to point to exception entry point
 		dbf d0,.vectorloop	; repeat for all vectors
 
-		move.l	#MainCPUError,(_Trap0).w	; vector for main CPU error
+		move.l	#MainCPUError,(_Trap0+2).w	; vector for main CPU error
 		rts
 ; ===========================================================================
 
