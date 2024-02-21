@@ -14,8 +14,8 @@ word_ram:			equ $80000 ; Mega CD Word RAM
 word_ram_2M:		equ	word_ram	; MCD Word RAM start (2M)
 word_ram_2M_end:	equ	$C0000	; MCD Word RAM end (2M)
 
-;word_ram_1M:		equ	$C0000	; MCD Word RAM start (1M/1M)
-;word_ram_1M_end:	equ	$E0000	; MCD Word RAM end (1M/1M)
+word_ram_1M:		equ	$C0000	; MCD Word RAM start (1M/1M)
+word_ram_1M_end:	equ	$E0000	; MCD Word RAM end (1M/1M)
 
 ; Backup RAM
 backup_ram:			equ	$FE0000	; Mega CD backup RAM (only odd bytes accessible)
@@ -119,17 +119,24 @@ mcd_subcom_7_lo:	equ $FFFF802F ; communication status 7
 mcd_timerint_interval:	equ	$FFFF8031 ; IRQ 3 timer; counts down from the 8-bit value written to this register, triggers IRQ 3 when it reaches 0; generally used for PCM driver timing
 
 mcd_interrupt_control:	equ	$FFFF8033 	; enable/disable triggering of interrupts (NOT the same as the interrupts in the 68K status register)
-	; WARNING: when BIOS is in use, ONLY graphics_done_int and timer_int are user-configurable.
+	; WARNING: when BIOS is in use, ONLY gfx_int and timer_int are user-configurable.
 	; The BIOS requires sub_vblank_int and cdd_int to ALWAYS be enabled, and will malfunction
 	; if they are disabled. cdc_int and subcode_int are enabled/disabled as needed when BIOS calls
 	; that require them are executed.
 
-	graphics_done_int:	equ 1	; triggered when a graphics operation completes (only while wordram is in 2M mode)
-	sub_vblank_int:		equ 2	; interrupt triggered by main CPU, generally on VBlank
-	timer_int:			equ 3	; triggered when timer set in mcd_timerint_interval reaches 0
-	cdd_int:			equ 4	; triggered by CD drive when reception of receiving status 7 is complete; used to manage processing of CD drive commands
-	cdc_int:			equ 5	; triggered by CD data controller when error correction is finished
-	subcode_int:		equ 6	; triggered when 98 byte buffering of subcode is complete
+	gfx_int_bit:			equ 1	; triggered when a graphics operation completes (only while wordram is in 2M mode)
+	sub_vblank_int_bit:		equ 2	; interrupt triggered by main CPU, generally on VBlank
+	timer_int_bit:			equ 3	; triggered when timer set in mcd_timerint_interval reaches 0
+	cdd_int_bit:			equ 4	; triggered by CD drive when reception of receiving status 7 is complete; used to manage processing of CD drive commands
+	cdc_int_bit:			equ 5	; triggered by CD data controller when decoding a frame is complete
+	subcode_int_bit:		equ 6	; triggered when 98 byte buffering of subcode is complete
+
+	gfx_int:			equ 1<<gfx_int_bit
+	sub_vblank_int:		equ 1<<sub_vblank_int_bit
+	timer_int:			equ 1<<timer_int_bit
+	cdd_int:			equ 1<<cdd_int_bit
+	cdc_int:			equ 1<<cdc_int_bit
+	subcode_int:		equ 1<<subcode_int_bit
 
 ; CD Drive control registers; BIOS use only
 cdd_fader:	equ	$FFFF8034 	; CD drive fader control/spindle speed register
@@ -208,7 +215,7 @@ _SubCPUStack:	equ $5E80 ; sub CPU initial stack pointer
 ; BIOS status table and flags
 ; _BIOSStatus, _LEDStatus, and _CDStatus are updated by calling the BIOSStatus function
 _BIOSStatus:	equ	$5E80	; _CDSTAT; CD BIOS status
-_DriveInitStatus:	equ _BIOSStatus
+_DriveInitStatus:	equ _BIOSStatus ; high nybble
 	drive_ready_bit:	equ 7	; 0 = drive ready; 1 = drive busy
 	tray_open_bit:	equ 6	; 1 = tray/door open
 	toc_read_bit:	equ 5	; 1 = drive is reading disc TOC
@@ -218,8 +225,9 @@ _DriveInitStatus:	equ _BIOSStatus
 	toc_read:		equ 1<<toc_read_bit
 	no_disc:		equ 1<<no_disc_bit
 	toc_done:		equ 0
+	drive_init_nybble:	equ no_disc|toc_read|tray_open|drive_ready
 
-_CDDAStatus:	equ _BIOSStatus
+_CDDAStatus:	equ _BIOSStatus ; low nybble
 	cdda_seek_bit:	equ 3	; 1 = drive is set to play CDDA in seek mode (i.e., set to stop at a specific track)
 	cdda_pause_bit:	equ 2	; 1 = CDDA is paused
 	cdda_scan_bit:	equ 1	; 1 = CDDA is scanning (i.e., fast forwarding or rewinding)
@@ -239,7 +247,7 @@ _CDDataStatus:		equ _BIOSStatus+1	; $5E81
 
 _LEDStatus:		equ $5E82	; LED; indicates current status of front panel LEDs
 	power_led_bit:	equ 9	; 1 = power LED (green; Model 1 only) is on
-	access_led_bit:	equ 8	; 1 = access LED (green on WonderMega/XEye, red on all other devices) is on
+	access_led_bit:	equ 8	; 1 = access LED (green on WonderMega/X'Eye, red on all other devices) is on
 	led_mode:		equ	$FF	; indicates current LED blink mode
 		; Following values are also used to temporarily override system LED control using the LEDSet BIOS call
 		led_ready:	equ 0	; power on, access flashing; CD ready and no disc
@@ -276,7 +284,7 @@ _CDVolume:		equ $5E98
 	cd_vol:			equ $FFF0	; bits 4-15
 	cd_volemph:		equ $F	; emphasis enable flag
 
-_CDFrameHeader:		equ $5E9C	; time written in frame with proceeds current data
+_CDFrameHeader:		equ $5E9C	; time written in frame which preceeds current data
 
 _BootStatus:	equ	$5EA0	; boot system status
 _UserMode:		equ	$5EA6	; system program return code
