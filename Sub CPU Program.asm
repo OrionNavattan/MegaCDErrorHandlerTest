@@ -36,7 +36,7 @@ Init:
 		moveq	#9-1,d0			; 9 vectors total
 
 	.vectorloop:
-		addq.l	#2,a1		; skip over instruction word
+		addq.w	#2,a1		; skip over instruction word
 		move.l	(a0)+,(a1)+	; set table entry to point to exception entry point
 		dbf d0,.vectorloop	; repeat for all vectors
 

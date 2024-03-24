@@ -704,7 +704,7 @@ KDebug_Write:
 		move.b	(a0)+,d7
 		bgt.s	.write_buffer			; if not null-terminator or flag, branch
 		beq.s	.write_buffer_done		; if null-terminator, branch
-		sub.b	#endl,d7				; is flag "new line"?
+		subi.b	#endl,d7				; is flag "new line"?
 		beq.s	.write_buffer			; if yes, branch
 		bra.s	.write_buffer_next		; otherwise, skip writing
 ; ===========================================================================
@@ -2263,7 +2263,7 @@ FormatDec_Cont:
 		neg.w	d2								; d2 = digit
 		or.b	d2,d0							; have we met non-zero digit yet?
 		beq.s	.next_digit						; if not, branch
-		add.b	#'0',d2
+		addi.b	#'0',d2
 		move.b	d2,(a0)+
 
 		dbf	d7,.next_digit
@@ -2934,7 +2934,7 @@ Console_Write:
 
 	; Process drawing flag
 .flag:
-		andi.w	#$1E,d1					; d2 = $00, $02, $04, $06, $08, $0A, $0C, $0E, $10, $12, $14, $16, $18, $1A, $1C, $1E
+		andi.w	#$1E,d1					; d1 = $00, $02, $04, $06, $08, $0A, $0C, $0E, $10, $12, $14, $16, $18, $1A, $1C, $1E
 		jmp	.command_handlers(pc,d1.w)
 ; ===========================================================================
 

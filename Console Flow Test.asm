@@ -31,6 +31,18 @@ Test_ExtendedFlags:
 		; Using "setx" and "setw" flags with test output ...
 		Console.Write "%<setx,1,setw,20>"
 		Console.Write "Testing paragraph fill with 'setx' and 'setw' flags...%<pal0>"
+
+		; Using "Console_SetXY" and "Console_SetWidth" ...
+		pushr.l	d0-d1,-(sp)
+		moveq	#24,d0				; X
+		moveq	#2,d1				; Y
+		jsr	Console_SetPosAsXY(pc)
+		moveq	#10,d1
+		jsr	Console_SetWidth(pc)
+
+		Console.Write "%<pal3>Paragraph fill test with %<pal2>direct API%<pal3> calls...%<pal0>"
+		popr.l	d0-d1
+
 		Console.Write "%<endl,setx,0,setw,40>"
 		jsr	CheckRegisterIntergity(pc)
 
@@ -68,10 +80,20 @@ Test_Formatter_SYM_SPLIT:
 
 Test_MiscCommands:
 		; Using misc. commands related to Console entity ...
-		Console.SetXY #3,#20
+		Console.SetXY #3,#22
 		Console.Write "Positioning test #1 ..."
 		Console.BreakLine
 		Console.Write "Positioning test #2 ..."
 		jsr	CheckRegisterIntergity(pc)
 
+Test_Assertions:
+		Console.SetXY #0,#26
+		Console.Write "Testing assertions..."
+
+		assert.l	d0,eq,#$472F741E
+		assert.l	d1,ge,RegisterData+4
+		assert.w	d2,hs,RegisterData+8+2
+		assert.b	d3,ls,RegisterData+12+3
+
+		Console.Write " ALL DONE!"
 		bra.w	TestDone
