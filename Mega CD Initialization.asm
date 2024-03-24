@@ -99,7 +99,7 @@ EntryPoint:
 		beq.s	.found				; branch if so
 
 	.nextBIOS:
-		addq.b	#1,d7				; increment BIOS ID
+		addq.b	#2,d7				; increment BIOS ID
 		movea.l	a0,a1				; reset a1
 		dbf	d0,.findloop			; loop until all BIOSes are checked
 
@@ -183,11 +183,10 @@ EntryPoint:
 		move.b	d6,(a3)
 
 		lea	(program_ram).l,a1		; start of program RAM
-		move.b	(v_bios_id).w,d4	; get BIOS ID
-		add.w	d4,d4				; make index
+		move.b	(v_bios_id).w,d4	; get BIOS ID (d4 is already 0)
 		lea MCDBIOSList(pc),a0
-		move.w	-2(a0,d4.w),d1	; -2 since IDs start at 1
-		movea.l	(a0,d1.w),a0	; a0 = start of compressed BIOS payload
+		move.w	-2(a0,d4.w),d4	; -2 since IDs start at 2
+		movea.l	(a0,d4.w),a0	; a0 = start of compressed BIOS payload
 
 		bsr.w	KosDec					; decompress the sub CPU BIOS (uses a0, a1, a4, a5)
 		bsr.w	Decompress_SubCPUProgram	; decompress the sub CPU program
@@ -264,7 +263,7 @@ SetupValues:
 
 		dc.b	$9F,$BF,$DF,$FF				; PSG mute values (PSG 1 to 4)
 
-MCDBIOSList:	index *,1
+MCDBIOSList:	index *,2,2
 		ptr	MCDBIOS_JP1			; 1
 		ptr	MCDBIOS_US1			; 2
 		ptr	MCDBIOS_EU1			; 3
