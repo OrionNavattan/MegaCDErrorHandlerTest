@@ -56,9 +56,10 @@ SubCPU_Done:
 ; ===========================================================================
 
 TerminateSubCPUOps:
-		moveq	#0,d0
-		move.w  d0,(cdd_fader).w	; silence CDDA
-		move.b	d0,(pcm_ctrl).l		; silence the RF5C164 (cannot use clr as this is a write-only register)
+		moveq	#0,d1
+		move.b	d1,(pcm_ctrl).l		; silence the RF5C164 (cannot use clr as this is a write-only register)
+		move.w	#FaderSet,d0
+		jsr	(_CDBIOS).w				; silence CDDA
 
 		move.w	#SubcodeStop,d0
 		jsr (_CDBIOS).w				; terminate subcode operations if running (does nothing if not already running)
