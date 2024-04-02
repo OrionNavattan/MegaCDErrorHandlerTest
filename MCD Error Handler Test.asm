@@ -43,7 +43,7 @@ Vectors:
 		dcb.l 16,ErrorExcept				; Unused (reserved)
 
 Header:
-		dc.b "SEGA GENESIS    "		; Hardware system ID (Console name)
+		dc.b "SEGA DISC SYSTEM"		; Hardware system ID (Console name)
 		dc.b "ORION   2023.DEC"				; Copyright holder and release date
 		dc.b "ORION'S MODE 1 ERROR HANDLER TEST               " ; Domestic name
 		dc.b "ORION'S MODE 1 ERROR HANDLER TEST               " ; International name
@@ -52,7 +52,7 @@ Header:
 		dc.b "FFFFFFFFFFFFFF"				; Serial/version number (Rev non-0)
 
 Checksum: 	dc.w $0
-		dc.b "JC              "				; I/O support
+		dc.b "JC              "				; I/O support (joypad and Mega CD Mode 1)
 ROM_Start_Ptr:	dc.l ROM_Start					; Start address of ROM
 ROM_End_Ptr:	dc.l ROM_End-1					; End address of ROM
 		dc.l $FF0000					; Start address of RAM
