@@ -143,9 +143,12 @@ assert:	macro	src,cond,dest
 	else narg=2
 		tst.\0	\src
 	endc
+	pusho
+	opt l.		; ensure compatibilty in projects that use a different local label symbol
 		b\cond\.s	.skip\@
 		RaiseError	"Assertion failed:%<endl>\src \cond \dest"
 	.skip\@:
+	popo
 	endc
 	endm
 
@@ -204,6 +207,8 @@ Console: macro
 
 	if strcmp("\0","write")|strcmp("\0","writeline")|strcmp("\0","Write")|strcmp("\0","WriteLine")
 		move.w	sr,-(sp)
+		pusho
+		opt l.		; ensure compatibilty in projects that use a different local label symbol
 		__FSTRING_GenerateArgumentsCode \1
 
 		; If we have any arguments in string, use formatted string function ...
@@ -233,6 +238,7 @@ Console: macro
 		__FSTRING_GenerateDecodedString \1
 		even
 	.instr_end\@:
+		popo
 
 	elseif strcmp("\0","run")|strcmp("\0","Run")
 		jsr	ErrorHandler_ConsoleOnly
@@ -250,6 +256,8 @@ Console: macro
 		move.w	(sp)+,sr
 
 	elseif strcmp("\0","sleep")|strcmp("\0","Sleep")
+		pusho
+		opt l.		; ensure compatibilty in projects that use a different local label symbol
 		move.w	sr,-(sp)
 		move.w	d0,-(sp)
 		move.l	a0,-(sp)
@@ -264,6 +272,7 @@ Console: macro
 		move.l	(sp)+,a0
 		move.w	(sp)+,d0
 		move.w	(sp)+,sr
+		popo
 
 	elseif strcmp("\0","setxy")|strcmp("\0","SetXY")
 		move.w	sr,-(sp)
@@ -297,6 +306,9 @@ KDebug: macro
 
 		__FSTRING_GenerateArgumentsCode \1
 
+		pusho
+		opt l.		; ensure compatibilty in projects that use a different local label symbol
+
 		; If we have any arguments in string, use formatted string function ...
 		if (__sp>0)
 			movem.l	a0-a2/d7,-(sp)
@@ -323,6 +335,7 @@ KDebug: macro
 		__FSTRING_GenerateDecodedString \1
 		even
 	.instr_end\@:
+		popo
 
 	elseif strcmp("\0","breakline")|strcmp("\0","BreakLine")
 		move.w	sr,-(sp)
