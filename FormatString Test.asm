@@ -17,6 +17,7 @@ FormatStringTest:
 		moveq	#0,d1					; d1 will be tests counter
 
 	.run_test:
+		KDebug.WriteLine "Running test #%<.b d1 deci>..."
 		lea	(a5),a0						; a0 = buffer
 		movea.l	(a6),a1						; a1 = source string
 		lea	$A(a6),a2						; a2 = arguments stack
@@ -54,7 +55,7 @@ FormatStringTest:
 		addq.w	#1,d1							; increment test number
 		adda.w	8(a6),a6						; a6 => Next test
 		tst.w	(a6)							; is test header valid?
-		bpl.s	.run_test						; if yes, keep doing tests
+		bpl.w	.run_test						; if yes, keep doing tests
 
 		Console.WriteLine 'Number of completed tests: %<.b d1 deci>'
 		Console.WriteLine '%<pal1>ALL TESTS HAVE PASSED SUCCESSFULLY'
@@ -96,7 +97,16 @@ FormatStringTest:
 ; --------------------------------------------------------------
 
 IdleFlush:
-		addq.w	#8,d7				; set Carry flag, so FormatString is terminated after this flush
+		; Make sure buffer starts where expected
+		pushr.l	a0
+		neg.w	d7
+		add.w	#_bufferSize-1,d7
+		sub.w	d7,a0					; a0 = start of the buffer
+		assert.l	a0,eq,a5				; buffer should start at the expected location
+		popr.l	a0
+
+		moveq	#0,d7
+		subq.w	#1,d7					; set sarry flag, so FormatString is terminated after this flush
 		rts
 ; ===========================================================================
 
@@ -432,6 +442,30 @@ TestData:
 	addTest { <.l long_data_chunk+$100010> }, &
 			<sym|long,$00>, &
 			<'long_data_chunk+100010'>
+	; #59: Control character with argument flow: Fits buffer
+	addTest { <.l 0> }, &
+			<'We should be able to fit it ',setw,40,$00>, &
+			<'We should be able to fit it ',setw,40>
+
+	; #60: Control character with argument flow: Fits buffer's edge
+	addTest { <.l 0> }, &
+			<'We should be able to fit it: ',setw,40,$00>, &
+			<'We should be able to fit it: ',setw,40>
+
+	; #61: Control character with argument flow: On buffer's edge
+	addTest { <.l 0> }, &
+			<"We shouldn't truncate argument ",setw,40,$00>, &
+			<"We shouldn't truncate argument ">
+
+	; #62: Control character with argument flow: Controls only test #1
+	addTest { <.l 0> }, &
+			<setw,40,$00>, &
+			<setw,40>
+
+	; #63: Control character with argument flow: Controls only test #2
+	addTest { <.l 0> }, &
+			<setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,$00>, &
+			<setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40,setw,40>
 
 		dc.w	-1
 ; ===========================================================================

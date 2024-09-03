@@ -104,6 +104,7 @@ MenuOps:	index *,,2
 		ptr	FormatStringTst
 		ptr	ConsoleUtilsTst
 		ptr	ConsoleFlowTst
+		ptr	AssertionTst
 		id_LastSelection:	equ ptr_id-ptr_id_inc
 		arraysize MenuOps
 ; ===========================================================================
@@ -136,6 +137,9 @@ ConsoleFlowTst:
 		dc.b	' - Run Console Flow Test',0
 		even
 
+AssertionTst:
+		dc.b	' - Run Assertions Test',0
+		even
 ; ----------------------------------------------------------------------------
 ; Common finish-up routine to end a test
 ; ----------------------------------------------------------------------------
@@ -194,6 +198,7 @@ TestPointers:	index *,,2
 		ptr	FormatStringTest
 		ptr	ConsoleUtilsTest
 		ptr	ConsoleFlowTest
+		ptr	AssertionTest
 ; ===========================================================================
 
 TestMainCPUAddErr:

@@ -86,6 +86,15 @@ Test_MiscCommands:
 		Console.Write "Positioning test #2 ..."
 		jsr	CheckRegisterIntergity(pc)
 
+
+Test_BufferFlushInbetweenControlSequence:
+		; Make sure buffer flushes don't split control sequence in two
+		Console.SetXY #1,#25
+		; Adding a dummy agrument (%<.b #$FA>) to make sure "Console_Write_Formatted" is used.
+		; Since MD Debugger 2.6, any strings without arguments is optimized to use
+		; "Console_Write" directly instead.
+		Console.Write "FLUSH %<.b #$FA>ILED!-%<setx,1>FLUSH SUCCESS!-"
+
 Test_Assertions:
 		Console.SetXY #0,#26
 		Console.Write "Testing assertions..."

@@ -130,25 +130,35 @@ disable_ints: macro
 ; Create assertions for debugging
 
 ; EXAMPLES:
-;	assert.b	d0, eq, #1		; d0 must be $01, or else crash!
-;	assert.w	d5, eq			; d5 must be $0000!
-;	assert.l	a1, hi, a0		; asert a1 > a0, or else crash!
-;	assert.b	MemFlag, ne		; MemFlag must be non-zero!
+;	assert.b	d0, eq, #1		; d0 must be $01, or else crash
+;	assert.w	d5, pl			; d5 must be positive
+;	assert.l	a1, hi, a0		; asert a1 > a0, or else crash
+;	assert.b	(MemFlag).w, ne	; MemFlag must be set (non-zero)
+;	assert.l	a0, eq, #Obj_Player, MyObjectsDebugger
 ; ---------------------------------------------------------------
 
-assert:	macro	src,cond,dest
+assert:	macro	src,cond,dest,console_program
 	if DebugFeatures
-	if narg=3
-		cmp.\0	\dest,\src
-	else narg=2
+		pushr.w	sr
+	if strlen("\dest")
+		cmp.\0	\dest, \src
+	else
 		tst.\0	\src
 	endc
 	pusho
 	opt l.		; ensure compatibilty in projects that use a different local label symbol
-		b\cond\.s	.skip\@
-		RaiseError	"Assertion failed:%<endl>\src \cond \dest"
+		b\cond\	.skip\@
+	popo
+	if strlen("\dest")
+		RaiseError	"Assertion failed:%<endl,pal2>> assert.\0 %<pal0>\src,%<pal2>\cond%<pal0>,\dest%<endl,pal1>Got: %<.\0 \src>", \console_program
+	else
+		RaiseError	"Assertion failed:%<endl,pal2>> assert.\0 %<pal0>\src,%<pal2>\cond%<endl,pal1>Got: %<.\0 \src>", \console_program
+	endc
+	pusho
+	opt l.		; ensure compatibilty in projects that use a different local label symbol
 	.skip\@:
 	popo
+	popr.w	sr
 	endc
 	endm
 
@@ -369,7 +379,7 @@ KDebug: macro
 
 __ErrorMessage:	macro	string,opts
 		__FSTRING_GenerateArgumentsCode \string
-		jsr	ErrorHandler
+		jsr	ErrorHandler(pc)
 		__FSTRING_GenerateDecodedString \string
 		if DebuggerExtensions&def(MainCPU)
 			dc.b	\opts+_eh_return|(((*&1)^1)*_eh_align_offset)	; add flag "_eh_align_offset" if the next byte is at odd offset ...

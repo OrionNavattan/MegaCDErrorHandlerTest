@@ -140,7 +140,7 @@ vdp_comm:	macro inst,addr,cmdtarget,cmd,dest,adjustment
 
 		command: = (\cmdtarget\_\cmd\)|((\addr&$3FFF)<<16)|((\addr&$C000)>>14)
 
-		ifarg \dest
+		if strlen("\dest")>0
 			\inst\.\0	#command\adjustment\,\dest
 		else
 			\inst\.\0	command\adjustment\
@@ -169,8 +169,6 @@ VRAM_PlaneB: 	equ		VRAM_PlaneA
 
 VRAM_ErrorScreen:	equ		VRAM_PlaneA
 VRAM_DebuggerPage:	equ		$C000
-
-
 
 _white:			equ 	0
 _yellow: 		equ 	1<<13
@@ -338,7 +336,7 @@ tile_line2:	equ (1<<tile_pal34_bit)<<8		; $4000
 tile_line3:	equ ((1<<tile_pal34_bit)|(1<<tile_pal12_bit))<<8 ; $6000
 tile_hi:	equ (1<<tile_hi_bit)<<8			; $8000
 
-tile_palette:	equ tile_pal4				; $6000
+tile_palette:	equ tile_line3				; $6000
 tile_settings:	equ	tile_xflip|tile_yflip|tile_palette|tile_hi ; $F800
 tile_vram:		equ (~tile_settings)&$FFFF	; $7FF
 tile_draw:		equ	(~tile_hi)&$FFFF	; $7FFF
@@ -658,7 +656,10 @@ KDebug_FlushBuffer:
 		beq.s	.write_buffer_done		; if null-terminator, branch
 		subi.b	#endl,d7				; is flag "new line"?
 		beq.s	.write_buffer			; if yes, branch
-		bra.s	.write_buffer_next		; otherwise, skip writing
+		cmp.b	#setw-endl,d7		; is it a flag without arguments?
+		blt.s	.write_buffer_next		; if yes, only skip the flag itself
+		addq.w	#1,a0					; otherwise, skip argument as well
+		bra.s	.write_buffer_next
 ; ===========================================================================
 
 	.write_buffer_done:
@@ -706,7 +707,10 @@ KDebug_Write:
 		beq.s	.write_buffer_done		; if null-terminator, branch
 		subi.b	#endl,d7				; is flag "new line"?
 		beq.s	.write_buffer			; if yes, branch
-		bra.s	.write_buffer_next		; otherwise, skip writing
+		cmp.b	#setw-endl,d7		; is it a flag without arguments?
+		blt.s	.write_buffer_next		; if yes, only skip the flag itself
+		addq.w	#1,a0					; otherwise, skip argument as well
+		bra.s	.write_buffer_next
 ; ===========================================================================
 
 	.write_buffer_done:
@@ -2489,7 +2493,7 @@ FormatString:
 ; ===========================================================================
 
 	.quit:
-		subq.w	#1,a0		; because D7 wasn't decremented?
+		subq.w	#1,a0		; set pointer to null character
 		jsr	(a4)							; call flush buffer function
 		popr.l	d0-d4/a3
 		rts
@@ -2577,9 +2581,9 @@ FormatString_CodeHandlers:
 		move.l	(a2)+,d1						; $08 :$0C	; code 4 : ## invalid ##: displays word, but loads longword
 		jmp	(a3)							; $0A :$0E	; code 5 : ## invalid ##: displays garbage word
 ; ===========================================================================
-		; codes F0..FF : Drawing command, one-byte argument (ignore)
-		addq.w	#1,a0							; $0C :$00	; code 6 : ## invalid ##: restores control character and puts another one
-		bra.s	.after_restore_char2			; $0E :$02	; code 7 : ## invalid ##: does nothing
+		; codes F0..FF : Drawing command, one-byte argument (ignore, cut early if no enough space to fit argument)
+		subq.w	#2,d7							; $0C :$00	; code 6 : ## invalid ##: restores 2 control characters if enough space
+		bra.s	.restore_two_characters			; $0E :$02	; code 7 : ## invalid ##: restores 2 control characters, but check is broken
 ; ===========================================================================
 		addq.w	#8,a3							; $10		; code 8 : Display signed byte
 		move.w	(a2)+,d1						; $12		; code 9 : Display signed word
@@ -2607,16 +2611,21 @@ FormatString_CodeHandlers:
 		jmp	(a3)							; draw the actual value using an appropriate handler
 ; ===========================================================================
 
-.after_restore_char2:
-		dbf	d7,.after_restore_char3
-		jsr	(a4)
-		bcs.s	.return2
-
-.after_restore_char3:
-		move.b	(a1)+,(a0)+
-
 .after_restore_char:
 		dbf	d7,.return2
+		jmp	(a4)
+; ===========================================================================
+
+.restore_two_characters:
+		bcs.s	.flush_buffer_early				; if we had less than 2 characters remaining in buffer, cut it early: we'll fit it in the next buffer instead
+		addq.w	#1,a0							; restore control character
+		move.b	(a1)+,(a0)+					; store argument (next byte)
+		rts										; return carry=0
+; ===========================================================================
+
+.flush_buffer_early:
+		addq.w	#2,d7							; don't store last 2 characters: we won't fit them
+		subq.w	#1,a1							; rewind source string to fetch flag again
 		jmp	(a4)
 
 ; ===========================================================================
@@ -2987,24 +2996,24 @@ Console_Write:
 ; ===========================================================================
 
 .set_palette_line_0:
-		andi.w	#$7FF,d4
+		andi.w	#~(tile_palette),d4	; clear palette bits (resets to line 0)
 		bra.s	.nextchar
 ; ===========================================================================
 
 .set_palette_line_1:
-		andi.w	#$7FF,d4
-		ori.w	#$2000,d4
+		andi.w	#~(tile_palette),d4	; clear palette bits
+		ori.w	#tile_line1,d4	; set palette bits to %01 (line 1)
 		bra.s	.nextchar
 ; ===========================================================================
 
 .set_palette_line_2:
-		andi.w	#$7FF,d4
-		ori.w	#$4000,d4
+		andi.w	#~(tile_palette),d4	; clear palette bits (resets to line 0)
+		ori.w	#tile_line2,d4	; set palette bits to %10 (line 2)
 		bra.s	.nextchar
 ; ===========================================================================
 
 .set_palette_line_3:
-		ori.w	#$6000,d4
+		ori.w	#tile_line3,d4	; set palette bits to %11 (line 3)
 		bra.s	.nextchar
 ; ===========================================================================
 

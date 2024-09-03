@@ -132,6 +132,7 @@ WaitSubCPU:
 TestSymbols:
 		incbin "FormatString Test Symbols.kos"
 
+		include	"Assertion Test.asm"
 		include "Console Utils Test.asm"
 		include "CheckRegisterIntegrity.asm"
 		include "Console Flow Test.asm"

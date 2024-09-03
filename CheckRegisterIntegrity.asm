@@ -28,7 +28,7 @@ CheckRegisterIntergity:
 		Console.Write "%<endl,pal1>@%<.l (a3) sym|split>: %<endl,pal0> Register %<pal1>%<.l a2 str>%<pal0> corrupted!%<endl> Got %<pal2>%<.l (a0)>%<pal0>, expected %<pal2>%<.l (a1)>%<pal0,endl>"
 
 		lea	sizeof_dumpedregs+4(sp),sp	; throw away dumped registers and return address to test flow
-		rts
+		bra.w	TestDone
 ; ===========================================================================
 
 RegisterData:
