@@ -4,7 +4,6 @@ MainMenu:
 		lea (sp),a3
 		bsr.w	ErrorHandler_SetupVDP
 		bsr.w	Error_InitConsole
-		clr.b	(v_menu_selection).w			; on very first load, start with first selection
 
 MainMenu_Return:
 		Console.WriteLine	'%<pal1>MEGA CD ERROR HANDLER TEST ROM'	; title and instructions are static colors

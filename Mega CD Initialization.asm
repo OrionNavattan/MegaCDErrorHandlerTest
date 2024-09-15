@@ -13,6 +13,11 @@ EntryPoint:
 		move.l	(Header).w,d7			; 'SEGA' for TMSS fulfillment and checking MCD bootrom
 		moveq	#sizeof_SetupVDP-1,d5		; VDP registers loop counter
 
+		tst.w	port_e_control_hi-mcd_mem_mode(a3)	; was this a soft reset?
+		bne.s	.wait_dma						; branch if so
+
+		move.l	d4,(v_keep_after_reset).w	; final four bytes of ram, cleared only on cold boot
+
 		move.b	console_version-mcd_mem_mode(a3),d6	; load hardware version
 		move.b	d6,d3					; copy to d3 for checking revision (d6 will be used later to set region and speed)
 		andi.b	#console_revision,d3			; get only hardware version ID
@@ -33,10 +38,10 @@ EntryPoint:
 		move.l	(a0)+,(a6)				; set DMA fill destination
 		move.w	d4,(a5)					; set DMA fill value (0000), clearing the VRAM
 
-		move.w	(a0)+,d5				; (sizeof_workram/4)-1
+		move.w	(a0)+,d5				; ((v_keep_after_reset-workram_start)/4)-1
 	.loop_ram:
 		move.l	d4,(a2)+				; clear 4 bytes of workram
-		dbf	d5,.loop_ram				; repeat until entire workram has been cleared
+		dbf	d5,.loop_ram				; repeat until entire workram has been cleared (except that retained on reset)
 
 		move.w	d1,z80_bus_request-mcd_mem_mode(a3)					; stop the Z80 (we will clear the VSRAM and CRAM while waiting for it to stop)
 		move.w	d1,z80_reset-mcd_mem_mode(a3)	; deassert Z80 reset (ZRES is held high on console reset until we clear it)
@@ -66,6 +71,9 @@ EntryPoint:
 		dbf	d5,.psg_loop				; repeat for all channels
 
 	;.find_bios:
+		tst.b	(v_bios_id).w	; was a BIOS already found?
+		bne.s	.alreadyfound	; if so, we don't need to find it again
+
 		btst	#console_mcd_bit,d6	; is there anything in the expansion slot?
 		bne.w	InitFailure1		; if not, branch
 		cmp.l	cd_bios_signature-cd_bios_name(a4),d7	; is the "SEGA" signature present?
@@ -109,6 +117,8 @@ EntryPoint:
 
 .found:
 		move.b	d7,(v_bios_id).w				; save BIOS ID
+
+	.alreadyfound:
 		andi.b	#console_region+console_speed,d6
 		move.b	d6,(v_console_region).w			; set region variable in RAM
 
@@ -255,7 +265,7 @@ SetupValues:
 		arraysize SetupVDP
 
 		dc.l	vram_dma				; DMA fill VRAM
-		dc.w	(sizeof_workram/4)-1	; workram clear loop counter
+		dc.w	((v_keep_after_reset-workram_start)/4)-1	; workram clear loop counter
 		dc.w	vdp_auto_inc+2				; VDP increment
 		dc.l	vsram_write				; VSRAM write mode
 		dc.l	cram_write				; CRAM write mode

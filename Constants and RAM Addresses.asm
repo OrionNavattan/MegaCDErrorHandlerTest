@@ -1,7 +1,8 @@
 		rsset $FFFFFFF6
 stack_pointer:		equ __rs	; $FFFFFFF6
-v_options_coords:	rs.l 1		; $FFFFFFF6	; start coordinates for options on menu screen
-v_joypad_hold:		rs.w 1		; $FFFFFFFA
+v_joypad_hold:		rs.w 1		; $FFFFFFF6
+v_options_coords:	rs.l 1		; $FFFFFFF8	; start coordinates for options on menu screen
+v_keep_after_reset:	equ __rs
 					rs.b 1
 v_menu_selection:	rs.b 1		; $FFFFFFFD
 v_console_region:	rs.b 1		; $FFFFFFFE
